@@ -1,0 +1,3 @@
+[submodule "src/adapters/rust-cqp-lurebot-adapter"]
+	path = src/adapters/rust-cqp-lurebot-adapter
+	url = git@github.com:esphas/rust-cqp-lurebot-adapter.git
