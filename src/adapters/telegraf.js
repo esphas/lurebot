@@ -11,16 +11,15 @@ module.exports = class TelegrafAdapter extends Adapter {
     this._agent = new Telegraf(token, options);
   }
 
-  async install(lurebot) {
+  async install(lurebot, ker) {
     await this._agent.telegram.getMe().then((botInfo) => {
       this._agent.options.username = botInfo.username;
       console.info(`Telegraf 整装待发！用户名：${botInfo.username}`);
     });
   }
 
-  async uninstall(lurebot) {
+  async uninstall(lurebot, ker) {
     this.stop();
-    super.uninstall();
   }
 
   start() {

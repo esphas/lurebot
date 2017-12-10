@@ -7,13 +7,17 @@ const HttpsProxyAgent = require('https-proxy-agent');
 
 const Lurebot = require('../src/main');
 const TelegrafAdapter = require('../src/adapters/telegraf');
+const CQPAdapter = require('../src/adapters/cqp');
 
 describe('Lurebot', function () {
-  let lurebot = new Lurebot();
+  let lurebot = new Lurebot({
+    host: 'localhost',
+    port: 9743
+  });
 
   before(async function () {
-    this.slow(2000);
-    let tg_auth = JSON.parse(fs.readFileSync('./test/private/tg-auth.json'));
+    this.timeout(10000);
+    let tg_auth = require('./private/tg-auth.json');
     let tg = new TelegrafAdapter(
       tg_auth.token,
       {
@@ -23,6 +27,8 @@ describe('Lurebot', function () {
       }
     );
     await lurebot.use('telegraf', tg);
+    let cqp = new CQPAdapter();
+    await lurebot.use('cqp', cqp);
   });
 
   describe('#hears', function () {
@@ -31,12 +37,13 @@ describe('Lurebot', function () {
     });
 
     it('should not be deaf', function (done) {
-      this.timeout(3000);
+      this.timeout(6000);
       let urdonefor = false;
-      lurebot.hears(/./, (reporter, identity, matched) => {
-        reporter.reply('done');
+      lurebot.hears(/./, async (reporter, identity, matched) => {
+        await reporter.reply('done');
         if (!urdonefor) {
           urdonefor = true;
+          console.log(matched);
           done();
         }
       });
