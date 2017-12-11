@@ -7,25 +7,28 @@ const Adapter = require('./adapters/adapter');
 class Lurebot {
 
   constructor(options) {
-    this._adapters = {};
+    this._adapters = new Map();
+    options = options || {};
     this._port = options.port || 9743;
     this._host = options.host || '127.0.0.1';
   }
 
   get adapters() {
-    return Object.getOwnPropertyNames(this._adapters);
+    return Array.from(this._adapters.keys());
   }
 
   async use(ker, adapter) {
     if (adapter instanceof Adapter) {
-      if (this._adapters.hasOwnProperty(ker)) {
+      if (this._adapters.has(ker)) {
         console.warn('🙈欸？大圣，您怎么又来了？');
         this._adapters[ker].uninstall(this, ker);
       }
-      this._adapters[ker] = adapter;
+      this._adapters.set(ker, adapter);
       await adapter.install(this, ker);
+      return true;
     } else {
       console.error('不要欺负人家啦！非要找些奇奇怪怪不认识的东西来干嘛啦！');
+      return false;
     }
   }
 

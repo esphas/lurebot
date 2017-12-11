@@ -1,19 +1,13 @@
 'use strict';
 
-const fs = require('fs');
-
 const {expect} = require('chai');
 const HttpsProxyAgent = require('https-proxy-agent');
 
 const Lurebot = require('../src/main');
 const TelegrafAdapter = require('../src/adapters/telegraf');
-const CQPAdapter = require('../src/adapters/cqp');
 
-describe('Lurebot', function () {
-  let lurebot = new Lurebot({
-    host: 'localhost',
-    port: 9743
-  });
+describe('TelegrafAdapter', function () {
+  let lurebot = new Lurebot();
 
   before(async function () {
     this.timeout(10000);
