@@ -4,14 +4,17 @@
   "description": "Lurebot",
   "author": "Esphas <esphas@hotmail.com>",
   "license": "MIT",
-  "main": "./src/main.js",
+  "main": "./lib/main",
+  "types": "./lib/main",
   "scripts": {
-    "test": "mocha -b -R list -u bdd --check-leaks --exit"
+    "test": "tsc & mocha -b -R list -u bdd --check-leaks --exit"
   },
   "devDependencies": {
-    "https-proxy-agent": "^2.1.1",
+    "@types/node": "^8.0.57",
     "chai": "^4.1.2",
-    "mocha": "^4.0.1"
+    "https-proxy-agent": "^2.1.1",
+    "mocha": "^4.0.1",
+    "typescript": "^2.6.2"
   },
   "dependencies": {
     "telegraf": "^3.17.1"
