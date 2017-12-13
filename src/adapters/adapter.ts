@@ -1,5 +1,5 @@
 
-export default abstract class Adapter {
+export abstract class Adapter {
 
   // 说好的做彼此的天使呢？
   abstract async install(inst: Installer): Promise<Status>;

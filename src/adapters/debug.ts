@@ -1,29 +1,34 @@
+import { Adapter } from "./adapter";
 
-// export default class DebugAdapter extends Adapter {
+export class DebugAdapter extends Adapter {
 
-//   constructor() {
-//     super();
-//     console.log('Adapter Constructor Called');
-//   }
+  constructor() {
+    console.log('Debug Adapter Constructor Called');
+    super();
+  }
 
-//   async install(lurebot, ker) {
-//     console.log(`Adapter ${ker} install() callled, lurebot adapters:`);
-//     console.dir(lurebot.adapters);
-//   }
+  async install(_inst: Installer): Promise<Status> {
+    console.log(`Debug Adapter install() called`);
+    return Status.Success;
+  }
 
-//   async uninstall(lurebot, ker) {
-//     //
-//   }
+  async uninstall(_uninst: Uninstaller): Promise<Status> {
+    console.log(`Debug Adapter uninstall() called`);
+    return Status.Success;
+  }
 
-//   start() {
-//     //
-//   }
+  start(): Status {
+    console.log(`Debug Adapter start() called`);
+    return Status.Success;
+  }
 
-//   stop() {
-//     //
-//   }
+  stop(): Status {
+    console.log(`Debug Adapter stop() called`);
+    return Status.Success;
+  }
 
-//   hears(wind, rain) {
-//     //
-//   }
-// };
+  hears(_wind: Wind, ..._rain: Drop[]): Status {
+    console.log(`Debug Adapter hears() called`);
+    return Status.Success;
+  }
+}
