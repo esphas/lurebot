@@ -1,3 +1,4 @@
+/// <reference path="types.d.ts" />
 import { Adapter } from './adapters/adapter';
 export declare class Lurebot {
     private adapters;

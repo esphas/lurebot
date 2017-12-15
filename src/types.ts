@@ -1,41 +1,41 @@
 
-declare interface LurebotOptions {
+interface LurebotOptions {
   port?: number;
   host?: string;
 }
 
-declare type Ker = string;
+type Ker = string;
 
-declare const enum Status {
+const enum Status {
   Success       = 0,
   Unknown       = 1 << 0,
   ArgumentError = 1 << 1,
   RepeatedCall  = 1 << 2,
 }
 
-declare interface UpdateListener {
+interface UpdateListener {
   (msg: Buffer): Status;
 }
 
-declare interface Installer {
+interface Installer {
   onUpdate(update: UpdateListener): Status;
 }
 
-declare interface Uninstaller {
+interface Uninstaller {
   removeUpdate(): Status;
 }
 
-declare type Identity = any; //
+type Identity = any; //
 
-declare interface Reporter {
+interface Reporter {
   reply(message: string): Promise<Status>;
 }
 
-declare interface Matched extends Array<string> {
+interface Matched extends Array<string> {
   input: string;
 }
 
-declare type Wind = string | RegExp | string[] | RegExp[];
-declare interface Drop {
+type Wind = string | RegExp | string[] | RegExp[];
+interface Drop {
   (reporter: Reporter, identity: Identity, matched: Matched): void;
 }
