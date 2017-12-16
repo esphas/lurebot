@@ -1,7 +1,15 @@
+import { LooseProcessor } from "../processor";
+export interface Installer {
+    process: LooseProcessor;
+    addListener(listener: BufferHandler): Status;
+}
+export interface Uninstaller {
+    removeListener(): Status;
+}
 export declare abstract class Adapter {
-    abstract install(inst: Installer): Promise<Status>;
-    abstract uninstall(uninst: Uninstaller): Promise<Status>;
+    private process;
+    install(inst: Installer): Promise<Status>;
+    uninstall(_uninst: Uninstaller): Promise<Status>;
     abstract start(): Status;
     abstract stop(): Status;
-    abstract hears(wind: Wind, ...rain: Drop[]): Status;
 }

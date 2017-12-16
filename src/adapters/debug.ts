@@ -1,4 +1,4 @@
-import { Adapter } from "./adapter";
+import { Adapter, Installer, Uninstaller } from "./adapter";
 
 export class DebugAdapter extends Adapter {
 
@@ -9,26 +9,25 @@ export class DebugAdapter extends Adapter {
 
   async install(_inst: Installer): Promise<Status> {
     console.log(`Debug Adapter install() called`);
-    return Status.Success;
+    let code = StatusCode.Success;
+    code |= (await super.install(_inst)).code;
+    return { code };
   }
 
   async uninstall(_uninst: Uninstaller): Promise<Status> {
     console.log(`Debug Adapter uninstall() called`);
-    return Status.Success;
+    let code = StatusCode.Success;
+    code |= (await super.uninstall(_uninst)).code;
+    return { code };
   }
 
   start(): Status {
     console.log(`Debug Adapter start() called`);
-    return Status.Success;
+    return { code: StatusCode.Success };
   }
 
   stop(): Status {
     console.log(`Debug Adapter stop() called`);
-    return Status.Success;
-  }
-
-  hears(_wind: Wind, ..._rain: Drop[]): Status {
-    console.log(`Debug Adapter hears() called`);
-    return Status.Success;
+    return { code: StatusCode.Success };
   }
 }

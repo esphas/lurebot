@@ -1,18 +1,27 @@
+import { LooseProcessor } from "../processor";
+
+export interface Installer {
+  process: LooseProcessor;
+  addListener(listener: BufferHandler): Status;
+}
+
+export interface Uninstaller {
+  removeListener(): Status;
+}
 
 export abstract class Adapter {
 
-  // 说好的做彼此的天使呢？
-  abstract async install(inst: Installer): Promise<Status>;
-
-  // 💔
-  abstract async uninstall(uninst: Uninstaller): Promise<Status>;
-
-  // 城上斜阳画角哀，沈园非复旧池台。伤心桥下春波绿，曾是惊鸿照影来。
+  private process: LooseProcessor;
+  async install(inst: Installer): Promise<Status> {
+    if (this.process) {
+      return { code: StatusCode.MultipleInstall };
+    }
+    this.process = inst.process;
+    return { code: StatusCode.Success };
+  };
+  async uninstall(_uninst: Uninstaller): Promise<Status> {
+    return { code: StatusCode.Success };
+  };
   abstract start(): Status;
-
-  // 自是寻春去校迟，不须惆怅怨芳时。狂风落尽深红色，绿叶成阴子满枝。
   abstract stop(): Status;
-
-  // 你们啊，不要听🌬就是🌧！你们本身也要有判断的嘛！
-  abstract hears(wind: Wind, ...rain: Drop[]): Status;
 }

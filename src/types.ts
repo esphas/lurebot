@@ -1,41 +1,22 @@
 
-interface LurebotOptions {
-  port?: number;
-  host?: string;
+interface Status {
+  code: StatusCode;
+  ext?: any
 }
 
-type Ker = string;
-
-const enum Status {
-  Success       = 0,
-  Unknown       = 1 << 0,
-  ArgumentError = 1 << 1,
-  RepeatedCall  = 1 << 2,
+const enum StatusCode {
+  Success           = 0,
+  Unknown           = 1 << 0,
+  ArgumentError     = 1 << 1,
+  RepeatedCall      = 1 << 2,
+  OccupiedKey       = 1 << 3,
+  NonexistedKey     = 1 << 4,
+  NoServer          = 1 << 5,
+  MultipleInstall   = 1 << 6,
 }
 
-interface UpdateListener {
+interface BufferHandler {
   (msg: Buffer): Status;
 }
 
-interface Installer {
-  onUpdate(update: UpdateListener): Status;
-}
-
-interface Uninstaller {
-  removeUpdate(): Status;
-}
-
-type Identity = any; //
-
-interface Reporter {
-  reply(message: string): Promise<Status>;
-}
-
-interface Matched extends Array<string> {
-  input: string;
-}
-
-type Wind = string | RegExp | string[] | RegExp[];
-interface Drop {
-  (reporter: Reporter, identity: Identity, matched: Matched): void;
-}
+type Maybe<T> = T | void | null | undefined;

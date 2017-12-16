@@ -5,5 +5,10 @@ Lurebot
 
 Protocol (?)
 ---
-| 1  |-ks---|------|
-| ks | ker  | msg  |
+| 1  |-sz---|---------|
+| sz | key  | payload |
+
+note to self
+---
+\n\r, \n
+gb18030, utf8

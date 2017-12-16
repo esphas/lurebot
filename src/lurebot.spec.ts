@@ -1,6 +1,5 @@
+import Lurebot = require('./main');
 import { expect } from 'chai';
-
-import { Lurebot } from './main';
 
 describe('Lurebot', function () {
   let lurebot = new Lurebot();
