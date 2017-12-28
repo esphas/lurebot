@@ -13,49 +13,43 @@ describe('Lurebot', function () {
     adapter.write('Second Message');
   });
 
-  afterEach(function () {
-    lurebot.stop();
-  })
-
   it('should handle messages', async function () {
-    this.timeout(1000);
     await lurebot.plug(adapter, 'debug1');
     lurebot.use((reporter, identity, next) => {
       reporter.reply('OK');
+      next();
     });
-    lurebot.start();
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        expect(adapter.output).to.have.members(['OK', 'OK']);
-        lurebot.unplug('debug1');
-        resolve();
-      }, 100);
+    adapter.onAllProcessed(() => {
+      expect(adapter.output).to.have.members(['OK', 'OK']);
+      lurebot.stop();
     });
+    await lurebot.start();
+    await lurebot.unplug('debug1');
   });
 
   it('should be able to hear', async function () {
-    this.timeout(3000);
     await lurebot.plug(adapter, 'debug2');
     let replyAfter = (ms: number) => {
-      return (reporter, identity) => {
-        setTimeout(() => {
-          reporter.reply(String(ms));
-        }, ms);
+      return async (reporter, identity) => {
+        await new Promise((resolve) => {
+          setTimeout(() => {
+            reporter.reply(String(ms));
+            resolve();
+          }, ms);
+        });
       };
     };
     lurebot.hears(
       /fi/i,
       replyAfter(1000),
       replyAfter(400),
-      replyAfter(2000)
+      replyAfter(1500)
     );
-    lurebot.start();
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        expect(adapter.output).to.have.ordered.members(['400', '1000', '2000']);
-        lurebot.unplug('debug2');
-        resolve();
-      }, 2100);
+    adapter.onAllProcessed(() => {
+      expect(adapter.output).to.have.ordered.members(['400', '1000', '1500']);
+      lurebot.stop();
     });
+    await lurebot.start();
+    await lurebot.unplug('debug2');
   });
 });

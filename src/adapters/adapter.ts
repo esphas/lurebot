@@ -24,6 +24,6 @@ export abstract class Adapter {
     this.process = undefined;
     return { code: StatusCode.Success };
   };
-  abstract start(): Status;
-  abstract stop(): Status;
+  abstract async start(): Promise<void>;
+  abstract stop(): void;
 }

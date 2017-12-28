@@ -4,38 +4,38 @@ import { Adapter, Installer, Uninstaller } from './adapter';
 export class DebugAdapter extends Adapter {
   private input: (string|number)[] = [];
   public output: string[] = [];
+  private done: Function = () => {};
+  private tasks: Promise<void>[] = [];
   private running = false;
 
   constructor() {
     super();
-    console.log('🐶  Debug Adapter Constructor Called');
+    console.log('🐶  Debug Adapter，构造！');
   }
 
   async install(_inst: Installer): Promise<Status> {
-    console.log(`🐶  Debug Adapter install() called`);
+    console.log(`🐶  Debug Adapter，安装！`);
     let code = StatusCode.Success;
     code |= (await super.install(_inst)).code;
     return { code };
   }
 
   async uninstall(_uninst: Uninstaller): Promise<Status> {
-    console.log(`🐶  Debug Adapter uninstall() called`);
+    console.log(`🐶  Debug Adapter，卸载！`);
     let code = StatusCode.Success;
     code |= (await super.uninstall(_uninst)).code;
     return { code };
   }
 
-  start(): Status {
-    console.log(`🐶  Debug Adapter start() called`);
+  async start() {
+    console.log(`🐶  Debug Adapter，启动！`);
     this.running = true;
-    this.poll();
-    return { code: StatusCode.Success };
+    await this.poll();
   }
 
-  stop(): Status {
-    console.log(`🐶  Debug Adapter stop() called`);
+  stop() {
+    console.log(`🐶  Debug Adapter，停止！`);
     this.running = false;
-    return { code: StatusCode.Success };
   }
 
   write(...items: (string|number)[]) {
@@ -44,7 +44,11 @@ export class DebugAdapter extends Adapter {
     }
   }
 
-  private poll() {
+  onAllProcessed(done: () => void) {
+    this.done = done;
+  }
+
+  private async poll() {
     if (!this.running) {
       return;
     }
@@ -67,12 +71,15 @@ export class DebugAdapter extends Adapter {
         addresses: ['debug'],
         auths: []
       };
-      this.process(reporter, identity);
+      this.tasks.push(this.process(reporter, identity));
     } else if (typeof item === 'number') {
       timeout = item;
+    } else {
+      await Promise.all(this.tasks);
+      timeout = 0;
+      this.done();
     }
-    setTimeout(() => {
-      this.poll();
-    }, timeout);
+    await new Promise((resolve) => setTimeout(resolve, timeout));
+    await this.poll();
   }
 }

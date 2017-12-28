@@ -1,8 +1,8 @@
 import * as Server from './server';
 import { Status, StatusCode, BufferHandler } from './types';
 import { Adapter, Installer, Uninstaller } from "./adapters/adapter";
-import { Processor, LooseProcessor } from './processor';
-import { HKReporter } from './reporter';
+import { Processor, Next } from './processor';
+import { HKReporter, Reporter } from './reporter';
 import { Identity } from './identity';
 
 export interface Options {
@@ -53,7 +53,7 @@ export class Lurebot {
 
   private installer(key: string): Installer {
     return {
-      process: this.process,
+      process: this.process.bind(this),
       addListener: (() => {
         let executed = false;
         return (listener: BufferHandler): Status => {
@@ -115,44 +115,46 @@ export class Lurebot {
         a(reporter, identity, (err) => {
           if (err) {
             console.error(err);
-            return { code: StatusCode.Unknown, ext: err };
+            throw err;
           }
-          return b(reporter, identity, next);
+          b(reporter, identity, next);
         });
       };
     };
   }
 
-  private process: LooseProcessor = (reporter, identity, next) => {
-    return this.processor(reporter, identity, next || function (err) {
-      if (err) {
-        console.error(err);
-        return { code: StatusCode.Unknown };
-      }
-      return { code: StatusCode.Success };
+  private async process(reporter: Reporter, identity: Identity, next?: Next) {
+    await new Promise((resolve) => {
+      this.processor(reporter, identity, function (err) {
+        (next || function (err) {
+          if (err) {
+            console.error(err);
+            throw err;
+          }
+        })(err);
+        resolve();
+      });
     });
   }
 
-  start(): Status {
-    let code = StatusCode.Success;
+  async start() {
+    let promises = [];
     if (this.server) {
-      code |= this.server.startPolling().code;
+      promises.push(this.server.startPolling());
     }
     for (const adapter of this.adapters.values()) {
-      code |= adapter.start().code;
+      promises.push(adapter.start());
     }
-    return { code };
+    await Promise.all(promises);
   }
 
-  stop(): Status {
-    let code = StatusCode.Success;
+  stop() {
     if (this.server) {
-      code |= this.server.stopPolling().code;
+      this.server.stopPolling();
     }
     for (const adapter of this.adapters.values()) {
-      code |= adapter.stop().code;
+      adapter.stop();
     }
-    return { code };
   }
 
   hears(wind: Wind, ...rain: Drop[]): Status {
@@ -174,16 +176,15 @@ export class Lurebot {
       return result;
     }
     this.use((reporter, identity, next) => {
+      let promises = [];
       let result = match(reporter.message);
       if (result) {
-        rain.forEach(async (drop) => {
-          drop(
-            Object.assign({}, reporter, { matched: result as RegExpMatchArray }),
-            identity
-          );
-        });
+        let hkreporter = Object.assign({}, reporter, { matched: result as RegExpMatchArray });
+        for (const drop of rain) {
+          promises.push(drop(hkreporter, identity));
+        }
       }
-      next();
+      Promise.all(promises).then(() => next());
     });
     return { code };
   }

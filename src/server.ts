@@ -50,16 +50,16 @@ export class Server {
     }
   }
 
-  startPolling(): Status {
-    let code = StatusCode.Success;
-    for (const [key, listener] of this.listeners) {
-      code |= this.poll(key, listener).code;
-    }
+  async startPolling() {
     this.polling = true;
-    return { code };
+    let promises = [];
+    for (const [key, listener] of this.listeners) {
+      promises.push(this.poll(key, listener));
+    }
+    await Promise.all(promises);
   }
 
-  private poll(key: string, listener: BufferHandler): Status {
+  private async poll(key: string, listener: BufferHandler) {
     let fetch = async () => {
       if (!this.polling) {
         return;
@@ -70,14 +70,12 @@ export class Server {
       } else {
         await new Promise((resolve) => setTimeout(resolve, 1000));
       }
-      fetch();
+      await fetch();
     };
-    fetch();
-    return { code: StatusCode.Success };
+    await fetch();
   }
 
-  stopPolling(): Status {
+  stopPolling() {
     this.polling = false;
-    return { code: StatusCode.Success };
   }
 }
