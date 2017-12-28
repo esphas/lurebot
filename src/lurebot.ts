@@ -2,7 +2,7 @@ import * as Server from './server';
 import { Status, StatusCode, BufferHandler } from './types';
 import { Adapter, Installer, Uninstaller } from "./adapters/adapter";
 import { Processor, LooseProcessor } from './processor';
-import { Reporter } from './reporter';
+import { HKReporter } from './reporter';
 import { Identity } from './identity';
 
 export interface Options {
@@ -11,7 +11,7 @@ export interface Options {
 
 export type Wind = string | string[] | RegExp | RegExp[];
 export interface Drop {
-  (reporter: Reporter, identity: Identity): any
+  (reporter: HKReporter, identity: Identity): any
 }
 
 export class Lurebot {
@@ -156,6 +156,35 @@ export class Lurebot {
   }
 
   hears(wind: Wind, ...rain: Drop[]): Status {
-    //
+    let code = StatusCode.Success;
+    let winds: (string|RegExp)[];
+    if (typeof wind === 'string' || wind instanceof RegExp) {
+      winds = [wind];
+    } else {
+      winds = wind;
+    }
+    let match = (message: string) => {
+      let result = null;
+      for (const wind of winds) {
+        result = message.match(wind);
+        if (result) {
+          break;
+        }
+      }
+      return result;
+    }
+    this.use((reporter, identity, next) => {
+      let result = match(reporter.message);
+      if (result) {
+        rain.forEach(async (drop) => {
+          drop(
+            Object.assign({}, reporter, { matched: result as RegExpMatchArray }),
+            identity
+          );
+        });
+      }
+      next();
+    });
+    return { code };
   }
 }

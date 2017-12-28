@@ -5,3 +5,7 @@ export interface Reporter {
   address: string;
   reply(message: string): Promise<Status>
 }
+
+export interface HKReporter extends Reporter {
+  matched: RegExpMatchArray;
+}
