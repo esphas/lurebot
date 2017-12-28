@@ -1,10 +1,10 @@
 
-interface Status {
+export interface Status {
   code: StatusCode;
   ext?: any
 }
 
-const enum StatusCode {
+export const enum StatusCode {
   Success           = 0,
   Unknown           = 1 << 0,
   ArgumentError     = 1 << 1,
@@ -15,8 +15,8 @@ const enum StatusCode {
   MultipleInstall   = 1 << 6,
 }
 
-interface BufferHandler {
+export interface BufferHandler {
   (msg: Buffer): Status;
 }
 
-type Maybe<T> = T | void | null | undefined;
+export type Maybe<T> = T | void | null | undefined;

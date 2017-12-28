@@ -1,3 +1,4 @@
+import { Status, StatusCode, BufferHandler } from './types';
 import dgram = require('dgram');
 
 export interface Options {
@@ -9,7 +10,7 @@ export interface Options {
 export class Server {
 
   private socket: dgram.Socket;
-  private messages: Map<string, Array<Buffer>> = new Map;
+  private messages: Map<string, Buffer[]> = new Map;
   private listeners: Map<string, BufferHandler> = new Map;
   private polling = false;
 

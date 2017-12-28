@@ -1,4 +1,5 @@
 import * as Server from "./server";
+import { Status, StatusCode, BufferHandler } from './types';
 import { Adapter, Installer, Uninstaller } from "./adapters/adapter";
 import { Processor, LooseProcessor } from "./processor";
 
@@ -33,6 +34,12 @@ export class Lurebot {
     let status = await adapter.install(this.installer(key));
     if (status.code === StatusCode.Success) {
       this.adapters.set(key, adapter);
+    } else {
+      try {
+        await adapter.uninstall(this.uninstaller(key));
+      } catch (err) {
+        console.debug(err);
+      }
     }
     return status;
   }

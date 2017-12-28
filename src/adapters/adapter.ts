@@ -1,3 +1,4 @@
+import { Status, StatusCode, BufferHandler } from '../types';
 import { LooseProcessor } from "../processor";
 
 export interface Installer {
@@ -11,7 +12,7 @@ export interface Uninstaller {
 
 export abstract class Adapter {
 
-  private process: LooseProcessor;
+  protected process?: LooseProcessor;
   async install(inst: Installer): Promise<Status> {
     if (this.process) {
       return { code: StatusCode.MultipleInstall };
@@ -20,6 +21,7 @@ export abstract class Adapter {
     return { code: StatusCode.Success };
   };
   async uninstall(_uninst: Uninstaller): Promise<Status> {
+    this.process = undefined;
     return { code: StatusCode.Success };
   };
   abstract start(): Status;
