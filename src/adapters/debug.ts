@@ -8,32 +8,32 @@ export class DebugAdapter extends Adapter {
 
   constructor() {
     super();
-    console.log('Debug Adapter Constructor Called');
+    console.log('🐶  Debug Adapter Constructor Called');
   }
 
   async install(_inst: Installer): Promise<Status> {
-    console.log(`Debug Adapter install() called`);
+    console.log(`🐶  Debug Adapter install() called`);
     let code = StatusCode.Success;
     code |= (await super.install(_inst)).code;
     return { code };
   }
 
   async uninstall(_uninst: Uninstaller): Promise<Status> {
-    console.log(`Debug Adapter uninstall() called`);
+    console.log(`🐶  Debug Adapter uninstall() called`);
     let code = StatusCode.Success;
     code |= (await super.uninstall(_uninst)).code;
     return { code };
   }
 
   start(): Status {
-    console.log(`Debug Adapter start() called`);
+    console.log(`🐶  Debug Adapter start() called`);
     this.running = true;
     this.poll();
     return { code: StatusCode.Success };
   }
 
   stop(): Status {
-    console.log(`Debug Adapter stop() called`);
+    console.log(`🐶  Debug Adapter stop() called`);
     this.running = false;
     return { code: StatusCode.Success };
   }
@@ -59,7 +59,6 @@ export class DebugAdapter extends Adapter {
         address: 'debug',
         reply: async (msg: string) => {
           this.output.push(msg);
-          console.log(msg);
           return { code: StatusCode.Success };
         }
       };

@@ -12,7 +12,7 @@ export class Lurebot {
   private server?: Server.Server;
   private adapters: Map<string, Adapter> = new Map;
   private processor: Processor = (reporter, identity, next) => {
-    console.info(`Received message ${ reporter.message } from ${ identity.uid }@${ reporter.address }`);
+    console.info(`🐶  Received message "${ reporter.message }" from ${ identity.uid }@${ reporter.address }`);
     next();
   };
 

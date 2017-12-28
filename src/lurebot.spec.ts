@@ -9,13 +9,16 @@ describe('Lurebot', function () {
     adapter.write('First Message');
     adapter.write('Second Message');
     lurebot.plug(adapter, 'debug');
+    lurebot.use((reporter, identity, next) => {
+      reporter.reply('OK');
+    });
   });
 
   it('should handle messages', function (done) {
     lurebot.start();
     setTimeout(() => {
-      expect(adapter.output).to.have.ordered.members(['First Message', 'Second Message']);
+      expect(adapter.output).to.have.ordered.members(['OK', 'OK']);
       done();
-    }, 1000);
+    }, 500);
   });
 });
