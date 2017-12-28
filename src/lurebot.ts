@@ -1,10 +1,17 @@
-import * as Server from "./server";
+import * as Server from './server';
 import { Status, StatusCode, BufferHandler } from './types';
 import { Adapter, Installer, Uninstaller } from "./adapters/adapter";
-import { Processor, LooseProcessor } from "./processor";
+import { Processor, LooseProcessor } from './processor';
+import { Reporter } from './reporter';
+import { Identity } from './identity';
 
 export interface Options {
   server?: Server.Options
+}
+
+export type Wind = string | string[] | RegExp | RegExp[];
+export interface Drop {
+  (reporter: Reporter, identity: Identity): any
 }
 
 export class Lurebot {
@@ -146,5 +153,9 @@ export class Lurebot {
       code |= adapter.stop().code;
     }
     return { code };
+  }
+
+  hears(wind: Wind, ...rain: Drop[]): Status {
+    //
   }
 }

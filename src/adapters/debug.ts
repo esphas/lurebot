@@ -1,5 +1,5 @@
 import { Status, StatusCode } from '../types';
-import { Adapter, Installer, Uninstaller } from "./adapter";
+import { Adapter, Installer, Uninstaller } from './adapter';
 
 export class DebugAdapter extends Adapter {
   private input: (string|number)[] = [];

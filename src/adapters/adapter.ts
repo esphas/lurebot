@@ -1,5 +1,5 @@
 import { Status, StatusCode, BufferHandler } from '../types';
-import { LooseProcessor } from "../processor";
+import { LooseProcessor } from '../processor';
 
 export interface Installer {
   process: LooseProcessor;

@@ -1,5 +1,6 @@
-import { Reporter } from "./reporter";
-import { Identity } from "./identity";
+import { Reporter } from './reporter';
+import { Identity } from './identity';
+import { Status, Maybe } from './types';
 
 export interface Processor {
   (reporter: Reporter, identity: Identity, next: Next): Maybe<Status>;
