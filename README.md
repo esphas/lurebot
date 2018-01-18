@@ -12,22 +12,26 @@ const lurebot = new Lurebot;
 const adapter = new Lurebot.Adapter.Telegraf('<telegram bot token>');
 // install the adapter
 lurebot.plug(adapter);
+
 // responses to all sources
 lurebot.hears(/^Hello Robot!/, function (hkreporter) {
   hkreporter.reply('Hello!');
 });
+
 // responses to recognized sources only
 lurebot.hears(/^-uid/i, function (hk, identity) {
   if (!identity.anonymous) {
     hk.reply('Hello, ' + identity.name + ', your UID is ' + identity.uid + '.');
   }
 });
+
 // responses to unrecognized private sources only
 lurebot.hears(/./, function (hk, id) {
   if (id.anonymous && hk.private) {
     hk.reply('I don\'t know you.');
   }
 });
+
 // response to recognized group sources only
 lurebot.hears(/^-ukpostcode\s*([\w\d]{4}\s?[\w\d]{3})/, async function (hk, id) {
   if (!hk.private && !id.anonymous) {
@@ -41,9 +45,17 @@ lurebot.hears(/^-ukpostcode\s*([\w\d]{4}\s?[\w\d]{3})/, async function (hk, id) 
     }
   }
 });
+
 // sessions
 lurebot.session(function (session) {
-  // start session
+  // restrictions (can be ignored)
+  session.restrict(function (hk, id) {
+    return !hk.anonymous;
+  });
+  // expires after being inactive for ?? (seconds)
+  // default to 60
+  session.expires(30);
+  // start session (required)
   session.start(/^-startguess/, function (hk, id) {
     hk.reply(id.name + ' started guessing number!');
     // set state to 'alive'
