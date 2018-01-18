@@ -38,8 +38,8 @@ lurebot.hears(/^-ukpostcode\s*([\w\d]{4}\s?[\w\d]{3})/, async function (hk, id) 
     hk.reply('Wait a minute, I need some time...');
     let info = await hk.fetch('https://postcodes.io/postcodes/' + hk.match[1]);
     info = info.json();
-    if (info.status == '200') {
-      hk.reply('...it should be ' + info.admin_ward);
+    if (info.status === 200) {
+      hk.reply('...it should be ' + info.result.admin_ward);
     } else {
       hk.reply('...sorry but I doubt if that postcode really exists');
     }

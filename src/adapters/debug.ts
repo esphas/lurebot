@@ -79,7 +79,7 @@ export class DebugAdapter extends Adapter {
         identity: item.identity,
         position: item.position
       });
-      this.tasks.push(this.process(reporter, reporter.identity, ()=>0));
+      this.tasks.push(this.process(reporter, reporter.identity, (err)=>err));
     }
     await new Promise((resolve) => setTimeout(resolve, timeout));
     await this.poll();

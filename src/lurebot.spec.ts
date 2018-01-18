@@ -101,7 +101,7 @@ describe('Practical Lurebot', function () {
     adapter.write(JSON.parse(JSON.stringify(input)));
     input.identity.anonymous = false;
     input.position.private = false;
-    input.message = '-ukpostcode AA'
+    input.message = '-ukpostcode AAAA AAA'
     adapter.write(JSON.parse(JSON.stringify(input)));
     input.message = '-ukpostcode OX49 5NU'
     adapter.write(JSON.parse(JSON.stringify(input)));
@@ -123,9 +123,9 @@ describe('Practical Lurebot', function () {
       if (!hk.private && !id.anonymous) {
         hk.reply('Wait a minute, I need some time...');
         let info = await hk.fetch('https://postcodes.io/postcodes/' + hk.matched[1]);
-        let jinfo: any = info.json();
-        if (jinfo.status == '200') {
-          hk.reply('...it should be ' + jinfo.admin_ward);
+        let jinfo: any = await info.json();
+        if (jinfo.status === 200) {
+          hk.reply('...it should be ' + jinfo.result.admin_ward);
         } else {
           hk.reply('...sorry but I doubt if that postcode really exists');
         }
