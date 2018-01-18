@@ -11,7 +11,7 @@ const lurebot = new Lurebot;
 // create a telegraf adapter (it uses telegraf to communicate with telegram server)
 const adapter = new Lurebot.Adapter.Telegraf('<telegram bot token>');
 // install the adapter
-lurebot.plug(adapter);
+lurebot.plug(adapter, 'telegraf');
 
 // responses to all sources
 lurebot.hears(/^Hello Robot!/, function (hkreporter) {
