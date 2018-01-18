@@ -1,28 +1,39 @@
-import { Status, StatusCode, BufferHandler } from '../types';
-import { LooseProcessor } from '../processor';
+import { Status } from '../types';
+import { PromisedProcessor } from '../processor';
+
+/** Handling Buffer, will be added as a listener in Server */
+export interface BufferHandler {
+  (msg: Buffer): Status;
+}
 
 export interface Installer {
-  process: LooseProcessor;
+  key: string,
+  process: PromisedProcessor;
   addListener(listener: BufferHandler): Status;
 }
 
 export interface Uninstaller {
+  key: string,
   removeListener(): Status;
 }
 
 export abstract class Adapter {
 
-  protected process?: LooseProcessor;
-  async install(inst: Installer): Promise<Status> {
-    if (this.process) {
-      return { code: StatusCode.MultipleInstall };
+  protected key?: string;
+  protected process?: PromisedProcessor;
+  install(inst: Installer): Status {
+    if (this.key) {
+      return Status.MultipleInstall;
     }
+    this.key = inst.key;
     this.process = inst.process;
-    return { code: StatusCode.Success };
+    return Status.Success;
   };
-  async uninstall(_uninst: Uninstaller): Promise<Status> {
+  uninstall(_uninst: Uninstaller): Status {
+    this.stop();
+    this.key = undefined;
     this.process = undefined;
-    return { code: StatusCode.Success };
+    return Status.Success;
   };
   abstract async start(): Promise<void>;
   abstract stop(): void;

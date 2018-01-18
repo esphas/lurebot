@@ -1,12 +1,15 @@
-import { Status, StatusCode, BufferHandler } from './types';
+import { Status } from './types';
+import { BufferHandler } from './adapters/adapter';
 import dgram = require('dgram');
 
+/** Server Options */
 export interface Options {
-  type?: dgram.SocketType,
-  port?: number,
-  host?: string
+  type?: dgram.SocketType;
+  port?: number;
+  host?: string;
 }
 
+/** UDP server implementing LMTP */
 export class Server {
 
   private socket: dgram.Socket;
@@ -16,7 +19,7 @@ export class Server {
 
   constructor(options: Options) {
     this.socket = dgram.createSocket(options.type || 'udp4', async (msg, rinfo) => {
-      console.info('Received message:', msg);
+      console.info(`(;3) Received message: ${msg}`);
       let size = msg.readUInt8(0);
       let key = msg.toString('utf8', 1, size + 1);
       let queue = this.messages.get(key) || [];
@@ -25,28 +28,29 @@ export class Server {
       this.respondTo(rinfo.port, rinfo.address);
     });
     this.socket.bind(options.port || 9743, options.host);
+    console.info(`(;3) Server running at ${options.host}:${options.port}!`)
   }
 
   private getNext(key: string): Buffer | undefined {
     return (this.messages.get(key) || []).shift();
   }
 
-  private respondTo(port: number, host: string): Status {
+  private respondTo(port: number, host: string) {
     this.socket.send(Buffer.from([0]), port, host);
-    return { code: StatusCode.Success };
   }
 
+  /** Actually, set, not add */
   addListener(key: string, listener: BufferHandler): Status {
     this.listeners.set(key, listener);
-    return { code: StatusCode.Success };
+    return Status.Success;
   }
 
   removeListener(key: string): Status {
     if (this.listeners.has(key)) {
       this.listeners.delete(key);
-      return { code: StatusCode.Success };
+      return Status.Success;
     } else {
-      return { code: StatusCode.NonexistedKey };
+      return Status.NonexistedKey;
     }
   }
 

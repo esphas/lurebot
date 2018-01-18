@@ -1,5 +1,5 @@
-import { Lurebot } from "./lurebot";
-import { Adapter } from "./adapters/adapter";
+import { Lurebot } from './lurebot';
+import { Adapter } from './adapters/adapter';
 declare const _default: typeof Lurebot & {
     Adapter: typeof Adapter;
 };

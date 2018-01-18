@@ -50,7 +50,7 @@ lurebot.hears(/^-ukpostcode\s*([\w\d]{4}\s?[\w\d]{3})/, async function (hk, id) 
 lurebot.session(function (session) {
   // restrictions (can be ignored)
   session.restrict(function (hk, id) {
-    return !hk.anonymous;
+    return !id.anonymous;
   });
   // expires after being inactive for ?? (seconds)
   // default to 60
@@ -117,7 +117,12 @@ Structure
 
 LMTP: Lurebot Message Transfer Protocol
 ---
-Work in progess
+```
+Packet  :: Size + Key + Message
+Size    :: UInt8
+Key     :: UTF8Char[Size]
+Message :: UTF8Char[] # All remaining
+```
 
 note to self
 ---

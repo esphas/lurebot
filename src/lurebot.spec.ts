@@ -9,8 +9,25 @@ describe('Lurebot', function () {
   beforeEach(function () {
     lurebot = new Lurebot();
     adapter = new DebugAdapter();
-    adapter.write('First Message');
-    adapter.write('Second Message');
+    let identity = {
+      uid: 0,
+      name: 'ghost',
+      addresses: ['debug'],
+      anonymous: false
+    }, position = {
+      pid: 0,
+      private: false
+    };
+    adapter.write({
+      message: 'First Message',
+      identity,
+      position
+    });
+    adapter.write({
+      message: 'Second Message',
+      identity,
+      position
+    });
   });
 
   it('should handle messages', async function () {
@@ -19,6 +36,7 @@ describe('Lurebot', function () {
       reporter.reply('OK');
       next();
     });
+    // this is an exclusive function for DebugAdapter
     adapter.onAllProcessed(() => {
       expect(adapter.output).to.have.members(['OK', 'OK']);
       lurebot.stop();

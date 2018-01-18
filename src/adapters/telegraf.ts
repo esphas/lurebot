@@ -1,50 +1,51 @@
-// import Telegraf = require('telegraf');
+import { Adapter, Installer } from './adapter';
+import Telegraf = require('telegraf');
+import { Status } from '../types';
+import { hireReporter } from '../reporter';
 
-// const Adapter = require('./adapter');
+export class TelegrafAdapter extends Adapter {
 
-// module.exports = class TelegrafAdapter extends Adapter {
+  private agent: Telegraf;
 
-//   constructor(token, options) {
-//     super();
-//     this._agent = new Telegraf(token, options);
-//   }
+  constructor(token: string, options: Telegraf.Options) {
+    super();
+    this.agent = new Telegraf(token, options);
+  }
 
-//   async install(lurebot, ker) {
-//     await this._agent.telegram.getMe().then((botInfo) => {
-//       this._agent.options.username = botInfo.username;
-//       console.info(`Telegraf 整装待发！用户名：${botInfo.username}`);
-//     });
-//   }
+  install(inst: Installer): Status {
+    this.agent.telegram.getMe().then((botInfo) => {
+      this.agent.options.username = botInfo.username;
+    });
+    this.agent.use((ctx, next) => {
+      if (this.process) {
+        let reporter = hireReporter({
+          message: ctx.message,
+          address: this.key || 'telegraf',
+          identity: {
+            //todo
+            uid: 0,
+            name: 'ghost',
+            addresses: ['telegraf'],
+            anonymous: false
+          },
+          position: {
+            pid: 0,
+            private: false
+          },
+          reply: async (message) => { ctx.reply(message); return Status.Success; }
+        });
+        this.process(reporter, reporter.identity, (err)=>err);
+      }
+      next();
+    });
+    return super.install(inst);
+  }
 
-//   async uninstall(lurebot, ker) {
-//     this.stop();
-//   }
+  async start() {
+    this.agent.startPolling();
+  }
 
-//   start() {
-//     this._agent.startPolling();
-//   }
-
-//   stop() {
-//     this._agent.stop();
-//   }
-
-//   hears(wind, ...rain) {
-//     let middleware = rain.map((drop) => {
-//       return (ctx, next) => {
-//         let reporter = {
-//           reply: ctx.reply
-//         };
-//         let identity = this.identityOf(/**/);
-//         let matched = ctx.message.text.match(wind);
-//         drop(reporter, identity, matched);
-//       };
-//     });
-//     this._agent.hears(wind, ...middleware);
-//   }
-
-//   identityOf(/**/) {
-//     return {
-//       todo: 'todo'
-//     };
-//   }
-// };
+  stop() {
+    this.agent.stop();
+  }
+}

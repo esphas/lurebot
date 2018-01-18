@@ -1,9 +1,4 @@
-/// <reference types="node" />
-interface Status {
-    code: StatusCode;
-    ext?: any;
-}
-declare const enum StatusCode {
+export declare const enum Status {
     Success = 0,
     Unknown = 1,
     ArgumentError = 2,
@@ -13,7 +8,4 @@ declare const enum StatusCode {
     NoServer = 32,
     MultipleInstall = 64,
 }
-interface BufferHandler {
-    (msg: Buffer): Status;
-}
-declare type Maybe<T> = T | void | null | undefined;
+export declare type Maybe<T> = T | void | null | undefined;

@@ -1,8 +1,17 @@
-import { Status, StatusCode } from '../types';
+import { Status } from '../types';
 import { Adapter, Installer, Uninstaller } from './adapter';
+import { hireReporter } from '../reporter';
+import { Identity, Position } from '../identity';
+
+export type DebugInput = InputMessage | number;
+export interface InputMessage {
+  message: string;
+  identity: Identity;
+  position: Position;
+}
 
 export class DebugAdapter extends Adapter {
-  private input: (string|number)[] = [];
+  private input: DebugInput[] = [];
   public output: string[] = [];
   private done: Function = () => {};
   private tasks: Promise<void>[] = [];
@@ -10,35 +19,31 @@ export class DebugAdapter extends Adapter {
 
   constructor() {
     super();
-    console.log('🐶  Debug Adapter，构造！');
+    console.log('(;3) Debug Adapter，构造！');
   }
 
-  async install(_inst: Installer): Promise<Status> {
-    console.log(`🐶  Debug Adapter，安装！`);
-    let code = StatusCode.Success;
-    code |= (await super.install(_inst)).code;
-    return { code };
+  install(inst: Installer): Status {
+    console.log(`(;3) Debug Adapter，安装！`);
+    return super.install(inst);
   }
 
-  async uninstall(_uninst: Uninstaller): Promise<Status> {
-    console.log(`🐶  Debug Adapter，卸载！`);
-    let code = StatusCode.Success;
-    code |= (await super.uninstall(_uninst)).code;
-    return { code };
+  uninstall(uninst: Uninstaller): Status {
+    console.log(`(;3) Debug Adapter，卸载！`);
+    return super.uninstall(uninst);
   }
 
   async start() {
-    console.log(`🐶  Debug Adapter，启动！`);
+    console.log(`(;3) Debug Adapter，启动！`);
     this.running = true;
     await this.poll();
   }
 
   stop() {
-    console.log(`🐶  Debug Adapter，停止！`);
+    console.log(`(;3) Debug Adapter，停止！`);
     this.running = false;
   }
 
-  write(...items: (string|number)[]) {
+  write(...items: DebugInput[]) {
     for (const item of items) {
       this.input.push(item);
     }
@@ -57,27 +62,24 @@ export class DebugAdapter extends Adapter {
     }
     let timeout = 10;
     let item = this.input.shift();
-    if (typeof item === 'string') {
-      let reporter = {
-        message: item,
-        address: 'debug',
-        reply: async (msg: string) => {
-          this.output.push(msg);
-          return { code: StatusCode.Success };
-        }
-      };
-      let identity = {
-        uid: 0,
-        addresses: ['debug'],
-        auths: []
-      };
-      this.tasks.push(this.process(reporter, identity));
-    } else if (typeof item === 'number') {
+    if (typeof item === 'number') {
       timeout = item;
-    } else {
+    } else if (typeof item === 'undefined') {
       await Promise.all(this.tasks);
       timeout = 0;
       this.done();
+    } else {
+      let reporter = hireReporter({
+        message: item.message,
+        address: this.key || 'debug',
+        reply: async (msg: string) => {
+          this.output.push(msg);
+          return Status.Success;
+        },
+        identity: item.identity,
+        position: item.position
+      });
+      this.tasks.push(this.process(reporter, reporter.identity, ()=>0));
     }
     await new Promise((resolve) => setTimeout(resolve, timeout));
     await this.poll();

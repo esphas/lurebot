@@ -1,6 +1,12 @@
 
 export interface Identity {
-  uid: number;
+  uid: number; // user id
+  name: string;
   addresses: string[];
-  auths: number[];
+  anonymous: boolean;
+}
+
+export interface Position {
+  pid: number; // position id
+  private: boolean;
 }

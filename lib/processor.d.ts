@@ -1,11 +1,11 @@
-import { Reporter } from "./reporter";
-import { Identity } from "./identity";
+import { Reporter } from './reporter';
+import { Identity } from './identity';
 export interface Processor {
-    (reporter: Reporter, identity: Identity, next: Next): Maybe<Status>;
+    (reporter: Reporter, identity: Identity, next: Next): void;
 }
-export interface LooseProcessor {
-    (reporter: Reporter, identity: Identity, next?: Next): Maybe<Status>;
+export interface PromisedProcessor {
+    (reporter: Reporter, identity: Identity, next: Next): Promise<void>;
 }
 export interface Next {
-    (err?: Error): Maybe<Status>;
+    (err?: Error): void;
 }

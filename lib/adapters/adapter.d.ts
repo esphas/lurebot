@@ -1,15 +1,21 @@
-import { LooseProcessor } from "../processor";
+/// <reference types="node" />
+import { Status } from '../types';
+import { PromisedProcessor } from '../processor';
+export interface BufferHandler {
+    (msg: Buffer): Status;
+}
 export interface Installer {
-    process: LooseProcessor;
+    process: PromisedProcessor;
     addListener(listener: BufferHandler): Status;
 }
 export interface Uninstaller {
     removeListener(): Status;
 }
+/** Handling Buffer */
 export declare abstract class Adapter {
-    private process;
-    install(inst: Installer): Promise<Status>;
-    uninstall(_uninst: Uninstaller): Promise<Status>;
-    abstract start(): Status;
-    abstract stop(): Status;
+    protected process?: PromisedProcessor;
+    install(inst: Installer): Status;
+    uninstall(_uninst: Uninstaller): Status;
+    abstract start(): Promise<void>;
+    abstract stop(): void;
 }
