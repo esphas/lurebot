@@ -1,19 +1,8 @@
-import { EventKey, EventHandleMap, Structs } from "node-napcat-ts";
-import { App } from "../app";
+import { Agent } from "../agent";
 
-export async function register(app: App, on: (event: EventKey, fn: EventHandleMap[EventKey]) => void) {
-    const auth = app.auth
-
-    const reply = async (context, text: string) => {
-        await app.napcat.send_msg({
-            user_id: context.user_id,
-            group_id: context.group_id,
-            message: [
-                Structs.reply(context.message_id),
-                Structs.text(text)
-            ]
-        })
-    }
+export default async (agent: Agent) => {
+    const auth = agent.app.auth
+    const quick = agent.app.quick
     
     const rollDice = (count: number, face: number) => {
         const results: number[] = []
@@ -23,12 +12,12 @@ export async function register(app: App, on: (event: EventKey, fn: EventHandleMa
         return results.reduce((a, b) => a + b, 0)
     }
 
-    on('message', async (context) => {
+    agent.on('message', async (context) => {
         const mSimpleDice = context.raw_message.match(/^\.r(?:oll)?\s*(\d+)\s*$/)
         if (mSimpleDice && auth.isUser(context.user_id)) {
             const face = Number(mSimpleDice[1])
             const result = rollDice(1, face)
-            await reply(context, String(result))
+            await quick.reply(context, String(result))
         } else {
             const mDice = context.raw_message.match(/^\.r(?:oll)?\s*((?:(?:\d+\s*)?d\s*)?\d+)((?:\s*[+-]\s*(?:(?:\d+\s*)?d\s*)?\d+)*)\s*$/)
             if (mDice && auth.isUser(context.user_id)) {
@@ -46,7 +35,6 @@ export async function register(app: App, on: (event: EventKey, fn: EventHandleMa
                     sum += diceResult
                     result += `1d${Number(first)}(${diceResult})`
                 }
-                console.log(rest)
                 for (const dice of rest.matchAll(/([+-])\s*(?:(\d+\s*)?(d)\s*)?(\d+)/g)) {
                     const sign = dice[1] === '+' ? 1 : -1
                     const count = Number(dice[2]) || 1
@@ -63,7 +51,8 @@ export async function register(app: App, on: (event: EventKey, fn: EventHandleMa
                     }
                 }
                 result += ` = ${sum}`
-                await reply(context, result)
+                agent.app.logger.log('debug', result)
+                await quick.reply(context, result)
             }
         }
     })

@@ -1,4 +1,4 @@
-import { Database } from "better-sqlite3";
+import { Database, Statement } from "better-sqlite3";
 
 export class Auth {
 
@@ -84,12 +84,22 @@ export class Auth {
         return (result as { count: number }).count > 0
     }
 
-    allowGroup(group_id: string | number) {
-        this.db.prepare(`insert or ignore into auth_group (group_id) values (?)`).run(String(group_id))
-    }
-
-    denyGroup(group_id: string | number) {
-        this.db.prepare(`delete from auth_group where group_id = ?`).run(String(group_id))
+    mod(action: 'add' | 'remove', type: 'group' | 'user', id: string | number) {
+        let stmt: Statement
+        if (action === 'add') {
+            if (type === 'group') {
+                stmt = this.db.prepare(`insert or ignore into auth_group (group_id) values (?)`)
+            } else {
+                stmt = this.db.prepare(`insert or ignore into auth_user (user_id) values (?)`)
+            }
+        } else {
+            if (type === 'group') {
+                stmt = this.db.prepare(`delete from auth_group where group_id = ?`)
+            } else {
+                stmt = this.db.prepare(`delete from auth_user where user_id = ?`)
+            }
+        }
+        stmt.run(String(id))
     }
 
     isGroupAllowed(group_id: string | number) {
