@@ -7,7 +7,7 @@
   "type": "module",
   "main": "index.ts",
   "scripts": {
-    "start": "tsx index.ts",
+    "start": "tsx index.ts"
   },
   "dependencies": {
     "better-sqlite3": "^12.2.0",

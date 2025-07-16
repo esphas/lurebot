@@ -4,8 +4,8 @@ import { App } from "../app";
 export async function register(app: App, on: (event: EventKey, fn: EventHandleMap[EventKey]) => void) {
     const auth = app.auth
 
-    const reply = (context, text: string) => {
-        app.napcat.send_msg({
+    const reply = async (context, text: string) => {
+        await app.napcat.send_msg({
             user_id: context.user_id,
             group_id: context.group_id,
             message: [
@@ -28,33 +28,43 @@ export async function register(app: App, on: (event: EventKey, fn: EventHandleMa
         if (mSimpleDice && auth.isUser(context.user_id)) {
             const face = Number(mSimpleDice[1])
             const result = rollDice(1, face)
-            reply(context, String(result))
+            await reply(context, String(result))
         } else {
             const mDice = context.raw_message.match(/^\.r(?:oll)?\s*((?:(?:\d+\s*)?d\s*)?\d+)((?:\s*[+-]\s*(?:(?:\d+\s*)?d\s*)?\d+)*)\s*$/)
             if (mDice && auth.isUser(context.user_id)) {
                 const first = mDice[1]
                 const rest = mDice[2].trim()
                 let sum = 0
+                let result = ''
                 if (first.includes('d')) {
                     const [count, face] = first.split('d')
-                    sum += rollDice(Number(count) || 1, Number(face))
+                    const diceResult = rollDice(Number(count) || 1, Number(face))
+                    sum += diceResult
+                    result += `${Number(count) || 1}d${Number(face)}(${diceResult})`
                 } else {
-                    sum += rollDice(1, Number(first))
+                    const diceResult = rollDice(1, Number(first))
+                    sum += diceResult
+                    result += `1d${Number(first)}(${diceResult})`
                 }
-                for (const dice of rest.matchAll(/([+-])(?:(\d+\s*)?(d)\s*)?(\d+)/g)) {
+                console.log(rest)
+                for (const dice of rest.matchAll(/([+-])\s*(?:(\d+\s*)?(d)\s*)?(\d+)/g)) {
                     const sign = dice[1] === '+' ? 1 : -1
                     const count = Number(dice[2]) || 1
                     const d = dice[3]
                     const face = Number(dice[4])
                     if (d === 'd') {
-                        sum += sign * rollDice(count, face)
+                        const diceResult = rollDice(count, face)
+                        sum += sign * diceResult
+                        result += `${dice[1]}${count}d${face}(${diceResult})`
                     } else {
-                        sum += sign * face
+                        const diceResult = face
+                        sum += sign * diceResult
+                        result += `${dice[1]}${face}(${diceResult})`
                     }
                 }
-                reply(context, String(sum))
+                result += ` = ${sum}`
+                await reply(context, result)
             }
         }
     })
-    
 }
