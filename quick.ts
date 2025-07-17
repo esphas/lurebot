@@ -19,7 +19,15 @@ export class Quick {
         })
     }
 
+    async replyStatus(context, result: boolean) {
+        await this.reply(context, result ? '√' : '×')
+    }
+
     async replyOk(context) {
-        await this.reply(context, '√')
+        await this.replyStatus(context, true)
+    }
+
+    async replyError(context) {
+        await this.replyStatus(context, false)
     }
 }

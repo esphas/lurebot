@@ -99,7 +99,8 @@ export class Auth {
                 stmt = this.db.prepare(`delete from auth_user where user_id = ?`)
             }
         }
-        stmt.run(String(id))
+        const result = stmt.run(String(id))
+        return result.changes > 0
     }
 
     isGroupAllowed(group_id: string | number) {

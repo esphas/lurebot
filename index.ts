@@ -1,7 +1,10 @@
 import dotenv from 'dotenv'
 import { App } from './app'
 
-dotenv.config()
+dotenv.config({
+    path: '.env',
+    quiet: process.env.NODE_ENV !== 'development'
+})
 
 async function main() {
     const host = process.env.NAPCAT_HOST
