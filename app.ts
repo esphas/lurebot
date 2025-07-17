@@ -57,11 +57,12 @@ export class App {
             verbose: this.logger.verbose
         })
         this.db.pragma('journal_mode = WAL')
+        this.db.pragma('foreign_keys = ON')
 
 
-        this.auth = new Auth(this.db)
+        this.auth = new Auth(this.db, this.logger.child({ name: 'Auth' }))
 
-        
+
         this.quick = new Quick(this)
 
 

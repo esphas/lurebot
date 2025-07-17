@@ -1,6 +1,6 @@
-import { Agent } from '../agent'
+import { AgentCore } from "../agent";
 
-export default async (agent: Agent) => {
+export const register: AgentCore = async (agent) => {
     const auth = agent.app.auth
     const ncat = agent.app.napcat
     const quick = agent.app.quick

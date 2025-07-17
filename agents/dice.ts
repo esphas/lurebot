@@ -14,13 +14,13 @@ export default async (agent: Agent) => {
 
     agent.on('message', async (context) => {
         const mSimpleDice = context.raw_message.match(/^\.r(?:oll)?\s*(\d+)\s*$/)
-        if (mSimpleDice && auth.isUser(context.user_id)) {
+        if (mSimpleDice && auth.isRegisteredUser(context.user_id)) {
             const face = Number(mSimpleDice[1])
             const result = rollDice(1, face)
             await quick.reply(context, String(result))
         } else {
             const mDice = context.raw_message.match(/^\.r(?:oll)?\s*((?:(?:\d+\s*)?d\s*)?\d+)((?:\s*[+-]\s*(?:(?:\d+\s*)?d\s*)?\d+)*)\s*$/)
-            if (mDice && auth.isUser(context.user_id)) {
+            if (mDice && auth.isRegisteredUser(context.user_id)) {
                 const first = mDice[1]
                 const rest = mDice[2].trim()
                 let sum = 0
