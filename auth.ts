@@ -1,4 +1,4 @@
-import { Database, Statement } from "better-sqlite3";
+import { Database, Statement } from 'better-sqlite3'
 
 export class Auth {
 

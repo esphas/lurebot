@@ -1,4 +1,4 @@
-import { Agent } from "../agent";
+import { Agent } from '../agent'
 
 export default async (agent: Agent) => {
     const auth = agent.app.auth

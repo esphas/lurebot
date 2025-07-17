@@ -1,11 +1,11 @@
-import { format, Logger, transports } from "winston"
-import { NCWebsocket } from "node-napcat-ts"
-import Database from "better-sqlite3"
+import { format, Logger, transports } from 'winston'
+import { NCWebsocket } from 'node-napcat-ts'
+import Database from 'better-sqlite3'
 import chokidar, { FSWatcher } from 'chokidar'
 
-import { Auth } from "./auth"
-import { Agent } from "./agent"
-import { Quick } from "./quick"
+import { Auth } from './auth'
+import { Agent } from './agent'
+import { Quick } from './quick'
 
 export interface AppConfig {
     host: string

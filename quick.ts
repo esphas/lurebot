@@ -1,5 +1,5 @@
-import { Structs } from "node-napcat-ts";
-import { App } from "./app";
+import { Structs } from 'node-napcat-ts'
+import { App } from './app'
 
 export class Quick {
     constructor(private app: App) {}

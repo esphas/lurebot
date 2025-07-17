@@ -1,12 +1,12 @@
-import { EventHandleMap, EventKey } from "node-napcat-ts"
-import { App } from "./app"
+import { EventHandleMap, EventKey } from 'node-napcat-ts'
+import { App } from './app'
 
-export type AgentCore = (agent: Agent) => Promise<void>;
+export type AgentCore = (agent: Agent) => Promise<void>
 
 export class Agent {
 
     private loaded: boolean = false
-    private listeners: Map<EventHandleMap[EventKey], [event: EventKey, fn: EventHandleMap[EventKey]]> = new Map();
+    private listeners: Map<EventHandleMap[EventKey], [event: EventKey, fn: EventHandleMap[EventKey]]> = new Map()
 
     constructor(public app: App, public dir: string, public file: string) {
     }
