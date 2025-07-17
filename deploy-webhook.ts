@@ -79,6 +79,17 @@ class DeployWebhook {
                     message: 'No code changes, skipping deploy'
                 }
             }
+            const { stdout: commitMessages } = await execAsync(`git log ${prevCommit}..${currentCommit} --pretty=%B`)
+            const allMessages = commitMessages.toLowerCase()
+            const skipKeywords = ['#skip']
+            if (skipKeywords.some(keyword => allMessages.includes(keyword))) {
+                this.log('检测到 skip 关键字，跳过部署')
+                return {
+                    success: true,
+                    message: 'Skip deploy'
+                }
+            }
+
             const { stdout: diffOut } = await execAsync(`git diff --name-only ${prevCommit} ${currentCommit}`)
             const diffFiles = diffOut.trim().split('\n')
 
@@ -95,9 +106,7 @@ class DeployWebhook {
                 restart = true
             }
 
-            const restartKeywords = ['restart', 'reboot', 'reload']
-            const { stdout: commitMessages } = await execAsync(`git log ${prevCommit}..${currentCommit} --pretty=%B`)
-            const allMessages = commitMessages.toLowerCase()
+            const restartKeywords = ['#restart', '#reboot', '#reload']
             if (restartKeywords.some(keyword => allMessages.includes(keyword))) {
                 this.log('检测到 restart 关键字，需要重启')
                 this.log(`相关 commit messages: ${commitMessages}`)
