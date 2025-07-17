@@ -1,17 +1,52 @@
 import { Database, Statement } from 'better-sqlite3'
 import { Logger } from 'winston'
 
-import config, { AuthConfig, AuthRole, AuthScope, AuthPermission } from './auth/config'
 import migrations, { Migration } from './auth/migrations'
 
-export { AuthConfig, AuthRole, AuthScope, AuthPermission }
+export interface AuthConfig {
+    scopes: Array<{ id: string }>
+    roles: Array<{ id: string }>
+    permissions: Array<{ id: string }>
+    rolePermissions: Array<{ roleId: string; permissionId: string }>
+}
+
+export enum AuthScope {
+    System = 'system',
+    Group = 'group'
+}
+
+export enum AuthRole {
+    Admin = 'admin',
+    Moderator = 'moderator',
+    User = 'user'
+}
+
+export enum AuthPermission {
+    Root = 'root',
+    Moderate = 'moderate',
+    Chat = 'chat'
+}
+
+const defaultConfig: AuthConfig = {
+    scopes: Object.values(AuthScope).map(scope => ({ id: scope })),
+    roles: Object.values(AuthRole).map(role => ({ id: role })),
+    permissions: Object.values(AuthPermission).map(permission => ({ id: permission })),
+    rolePermissions: [
+        { roleId: AuthRole.Admin, permissionId: AuthPermission.Root },
+        { roleId: AuthRole.Admin, permissionId: AuthPermission.Moderate },
+        { roleId: AuthRole.Admin, permissionId: AuthPermission.Chat },
+        { roleId: AuthRole.Moderator, permissionId: AuthPermission.Moderate },
+        { roleId: AuthRole.Moderator, permissionId: AuthPermission.Chat },
+        { roleId: AuthRole.User, permissionId: AuthPermission.Chat }
+    ]
+} as AuthConfig
 
 export class Auth {
     private migrations: Migration[] = []
     private config: AuthConfig
 
     constructor(private db: Database, private logger: Logger) {
-        this.config = config
+        this.config = defaultConfig
         this.migrations = migrations
         
         this.init()
