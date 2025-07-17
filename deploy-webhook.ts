@@ -66,9 +66,12 @@ class DeployWebhook {
             this.log(`开始部署...`);
             this.log(`切换到项目目录: ${this.config.projectPath}`);
             process.chdir(this.config.projectPath);
-            const { stdout: prevCommit } = await execAsync('git rev-parse HEAD');
+            const { stdout: prevCommitRaw } = await execAsync('git rev-parse HEAD');
+            const prevCommit = prevCommitRaw.trim()
             const { stdout: pullOutput } = await execAsync('git pull origin main');
-            const { stdout: currentCommit } = await execAsync('git rev-parse HEAD');
+            this.log(`拉取输出: ${pullOutput}`);
+            const { stdout: currentCommitRaw } = await execAsync('git rev-parse HEAD');
+            const currentCommit = currentCommitRaw.trim()
             if (currentCommit === prevCommit) {
                 this.log('没有代码变化，跳过部署');
                 return {
