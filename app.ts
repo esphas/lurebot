@@ -1,9 +1,10 @@
 import { format, Logger, transports } from 'winston'
 import { NCWebsocket } from 'node-napcat-ts'
-import Database from 'better-sqlite3'
 import chokidar, { FSWatcher } from 'chokidar'
 
+import { Database } from './db'
 import { Auth } from './auth'
+import { Sessions } from './session'
 import { Agent } from './agent'
 import { Quick } from './quick'
 
@@ -17,8 +18,9 @@ export class App {
     public dev_mode: boolean = process.env.NODE_ENV === 'development'
     public logger: Logger
     public napcat: NCWebsocket
-    public db: Database.Database
+    public db: Database
     public auth: Auth
+    public session: Sessions
     public quick: Quick
 
     private agents: Map<string, Agent>
@@ -52,25 +54,17 @@ export class App {
             }
         }, this.dev_mode)
 
+        this.db = new Database('data.db', this.logger.child({ name: 'Database' }))
         
-        this.db = new Database('data.db', {
-            verbose: this.logger.verbose
-        })
-        this.db.pragma('journal_mode = WAL')
-        this.db.pragma('foreign_keys = ON')
-
-
         this.auth = new Auth(this.db, this.logger.child({ name: 'Auth' }))
-
+        this.session = new Sessions(this.db, this.logger.child({ name: 'Session' }))
 
         this.quick = new Quick(this)
 
-
         this.agents = new Map()
         this.watchAgents()
-
     }
-    
+
     async start() {
         this.logger.log('info', `Connecting...`)
         try {
