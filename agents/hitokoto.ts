@@ -14,7 +14,7 @@ export default async (agent: Agent) => {
                 const text = `${hitokoto.hitokoto}\n——${hitokoto.from_who || '佚名'}${hitokoto.from ? `(${hitokoto.from})` : ''}`
                 await quick.reply(context, text)
             } else {
-                await quick.log_error(context, `一言请求失败: ${response.statusText}`)
+                await quick.log_error(context, `一言请求失败: ${response.status} ${response.statusText}\n${response.url}`)
                 await quick.replyError(context)
             }
         }
