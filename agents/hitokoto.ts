@@ -11,7 +11,7 @@ export default async (agent: Agent) => {
             const response = await fetch(`https://v1.hitokoto.cn/?${c}&encode=json`)
             if (response.ok) {
                 const hitokoto = await response.json()
-                const text = `${hitokoto.hitokoto}\n——${hitokoto.from_who || '佚名'}${hitokoto.from ? `(${hitokoto.from})` : ''}`
+                const text = `${hitokoto.hitokoto}\n        ——${hitokoto.from_who || '佚名'}${hitokoto.from ? `(${hitokoto.from})` : ''}`
                 await quick.reply(context, text)
             } else {
                 await quick.replyError(context)
