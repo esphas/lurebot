@@ -80,7 +80,7 @@ class DeployWebhook {
                 }
             }
             const { stdout: diffOut } = await execAsync(`git diff --name-only ${prevCommit} ${currentCommit}`)
-            const diffFiles = diffOut.split('\n')
+            const diffFiles = diffOut.trim().split('\n')
 
             if (diffFiles.includes('package.json')) {
                 this.log('检测到 package.json 变化，安装依赖...')
