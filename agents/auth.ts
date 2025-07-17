@@ -25,24 +25,20 @@ export default async (agent: Agent) => {
             const type = mMod[2] as 'group' | 'group_members' | 'user'
             const id = mMod[3]
             if (type === 'group_members') {
-                if ('group_id' in context) {
-                    const members = await ncat.get_group_member_list({
-                        group_id: context.group_id
-                    })
-                    let failed: number[] = []
-                    for (const member of members) {
-                        const result = auth.mod(action, 'user', member.user_id)
-                        if (!result) {
-                            failed.push(member.user_id)
-                        }
+                const members = await ncat.get_group_member_list({
+                    group_id: Number(id)
+                })
+                let failed: number[] = []
+                for (const member of members) {
+                    const result = auth.mod(action, 'user', member.user_id)
+                    if (!result) {
+                        failed.push(member.user_id)
                     }
-                    if (failed.length > 0) {
-                        await quick.reply(context, `失败: ${failed.join(', ')}`)
-                    } else {
-                        await quick.replyOk(context)
-                    }
+                }
+                if (failed.length > 0) {
+                    await quick.reply(context, `失败: ${failed.join(', ')}`)
                 } else {
-                    await quick.replyError(context)
+                    await quick.replyOk(context)
                 }
             } else {
                 const result = auth.mod(action, type, id)
