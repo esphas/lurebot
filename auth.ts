@@ -8,35 +8,26 @@ export interface AuthConfig {
     rolePermissions: Array<{ roleId: string; permissionId: string }>
 }
 
-export enum AuthScope {
-    Global = 'global',
-    Private = 'private',
-    Group = 'group'
-}
+export const AUTH_SCOPES = ['global', 'private', 'group'] as const
+export type AuthScope = typeof AUTH_SCOPES[number]
 
-export enum AuthRole {
-    Admin = 'admin',
-    Moderator = 'moderator',
-    User = 'user'
-}
+export const AUTH_ROLES = ['admin', 'moderator', 'user'] as const
+export type AuthRole = typeof AUTH_ROLES[number]
 
-export enum AuthPermission {
-    Root = 'root',
-    Moderate = 'moderate',
-    Chat = 'chat'
-}
+export const AUTH_PERMISSIONS = ['root', 'moderate', 'chat'] as const
+export type AuthPermission = typeof AUTH_PERMISSIONS[number]
 
 const defaultConfig: AuthConfig = {
-    scopes: Object.values(AuthScope).map(scope => ({ id: scope })),
-    roles: Object.values(AuthRole).map(role => ({ id: role })),
-    permissions: Object.values(AuthPermission).map(permission => ({ id: permission })),
+    scopes: AUTH_SCOPES.map(scope => ({ id: scope })),
+    roles: AUTH_ROLES.map(role => ({ id: role })),
+    permissions: AUTH_PERMISSIONS.map(permission => ({ id: permission })),
     rolePermissions: [
-        { roleId: AuthRole.Admin, permissionId: AuthPermission.Root },
-        { roleId: AuthRole.Admin, permissionId: AuthPermission.Moderate },
-        { roleId: AuthRole.Admin, permissionId: AuthPermission.Chat },
-        { roleId: AuthRole.Moderator, permissionId: AuthPermission.Moderate },
-        { roleId: AuthRole.Moderator, permissionId: AuthPermission.Chat },
-        { roleId: AuthRole.User, permissionId: AuthPermission.Chat }
+        { roleId: 'admin', permissionId: 'root' },
+        { roleId: 'admin', permissionId: 'moderate' },
+        { roleId: 'admin', permissionId: 'chat' },
+        { roleId: 'moderator', permissionId: 'moderate' },
+        { roleId: 'moderator', permissionId: 'chat' },
+        { roleId: 'user', permissionId: 'chat' }
     ]
 } as AuthConfig
 
@@ -71,19 +62,6 @@ export class Auth {
         return this.db.count('auth_user', {})
     }
 
-    createUser(user_id: string | number) {
-        this.db.insert('auth_user', { user_id })
-    }
-
-    createAdmin(user_id: string | number) {
-        this.createUser(user_id)
-        this.db.insert('auth_user_scope_role', { user_id, scope_id: AuthScope.Global, scope_info: 'system', role_id: 'admin' })
-    }
-
-    isAdmin(user_id: string | number) {
-        return this.db.has('auth_user_scope_role', { user_id, scope_id: AuthScope.Global, scope_info: 'system', role_id: 'admin' })
-    }
-
     isRegisteredUser(user_id: string | number) {
         return this.db.has('auth_user', { user_id })
     }
@@ -92,28 +70,34 @@ export class Auth {
         return this.db.has('auth_group', { group_id })
     }
 
-    can(user_id: string | number, group_id: string | number | null, permission: AuthPermission) {
+    canRole(role_id: AuthRole, permission_id: AuthPermission) {
+        return this.db.has('auth_role_permission', { role_id, permission_id })
+    }
+
+    can({ user_id, group_id }: { user_id: string | number, group_id?: string | number }, permission_id: AuthPermission) {
         if (!this.isRegisteredUser(user_id)) { return false }
 
-        const permission_id = this.db.get('auth_permission', { id: permission })?.id as string | undefined
-        if (permission_id == null) { return false }
-
+        let scope_id: AuthScope | null = null
+        let scope_info: string = ''
         if (group_id) {
             if (this.isRegisteredGroup(group_id)) {
-                const role = this.db.get('auth_user_scope_role', { user_id, scope_id: 'group', scope_info: group_id })
-                if (role != null) {
-                    if (this.db.has('auth_role_permission', { role_id: role.role_id, permission_id })) {
-                        return true
-                    }
-                }
+                scope_id = 'group'
+                scope_info = group_id.toString()
+            } else {
+                return false
             }
+        } else {
+            scope_id = 'private'
         }
 
-        const role = this.db.get('auth_user_scope_role', { user_id, scope_id: AuthScope.Global, scope_info: 'system' })
-        if (role != null) {
-            if (this.db.has('auth_role_permission', { role_id: role.role_id, permission_id })) {
-                return true
-            }
+        const local_role_id = this.db.get('auth_user_scope_role', { user_id, scope_id, scope_info })?.role_id as AuthRole ?? 'user'
+        if (this.canRole(local_role_id, permission_id)) {
+            return true
+        }
+
+        const global_role_id = this.db.get('auth_user_scope_role', { user_id, scope_id: 'global' })?.role_id as AuthRole | undefined
+        if (global_role_id != null && this.canRole(global_role_id, permission_id)) {
+            return true
         }
 
         return false
@@ -123,36 +107,41 @@ export class Auth {
         let stmt: any
         if (action === 'add') {
             if (type === 'group') {
-                stmt = this.db.insert('auth_group', { group_id: id })
+                stmt = this.db.insert('auth_group', { id })
             } else {
-                stmt = this.db.insert('auth_user', { user_id: id })
+                stmt = this.db.insert('auth_user', { id })
             }
         } else {
             if (type === 'group') {
-                stmt = this.db.delete('auth_group', { group_id: id })
+                stmt = this.db.delete('auth_group', { id })
             } else {
-                stmt = this.db.delete('auth_user', { user_id: id })
+                stmt = this.db.delete('auth_user', { id })
             }
         }
         const result = stmt.run(id)
         return result.changes > 0
     }
 
-    assign_role(user_id: string | number, group_id: string | number | null, role: AuthRole) {
-        if (group_id) {
-            this.db.insert('auth_user_scope_role', { user_id, scope_id: AuthScope.Group, scope_info: group_id, role_id: role })
-        } else {
-            this.db.insert('auth_user_scope_role', { user_id, scope_id: AuthScope.Global, scope_info: '', role_id: role })
-        }
+    assign_role(user_id: string | number, scope_id: AuthScope, scope_info: string, role: AuthRole) {
+        this.db.insert('auth_user_scope_role', { user_id, scope_id, scope_info, role_id: role })
+    }
+
+    createAdmin(user_id: string | number) {
+        this.mod('add', 'user', user_id)
+        this.assign_role(user_id, 'global', '', 'admin')
+    }
+
+    isAdmin(user_id: string | number) {
+        return this.db.has('auth_user_scope_role', { user_id, scope_id: 'global', role_id: 'admin' })
     }
 
     assign_error_report_listener(user_id: string | number, listening: boolean) {
         this.db.update('auth_user', { error_report_listening: listening ? 1 : 0 }, { user_id })
     }
 
-    get_error_report_listeners(group_id: string | number | null) {
+    get_error_report_listeners(group_id?: string | number) {
         const users = this.db.all('auth_user', { error_report_listening: 1 }) as { user_id: string }[]
-        const listeners = users.filter(user => this.can(user.user_id, group_id, AuthPermission.Moderate))
+        const listeners = users.filter(user => this.can({ user_id: user.user_id, group_id }, 'moderate'))
         return listeners.map(user => user.user_id)
     }
 }

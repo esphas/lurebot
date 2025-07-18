@@ -7,7 +7,7 @@ import fs from 'fs'
 import { Database } from './db'
 import { Auth } from './auth'
 import { Sessions } from './session'
-import { Agent, Agents } from './agent'
+import { Agents } from './agent'
 import { Quick } from './quick'
 
 export type RequiredAppConfig = {

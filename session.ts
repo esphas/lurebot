@@ -6,8 +6,8 @@ import { AuthScope } from './auth'
 export type SessionIdentifier = {
     topic: string,
     user_id: string,
-    scope: AuthScope,
-    group_id?: string,
+    scope_id: AuthScope,
+    scope_info?: string,
 }
 
 export type SessionOptions = Partial<{
@@ -20,15 +20,12 @@ export type Session = {
     last_active: Date,
     topic: string,
     created_by: string,
-    scope: AuthScope,
-    group_id?: string,
+    scope_id: AuthScope,
+    scope_info: string,
 } & Required<SessionOptions>
 
-export enum ParticipantRole {
-    Owner = 'owner',
-    Admin = 'admin',
-    Member = 'member'
-}
+export const PARTICIPANT_ROLES = ['owner', 'moderator', 'member'] as const
+export type ParticipantRole = typeof PARTICIPANT_ROLES[number]
 
 export interface Participant {
     session_id: string
@@ -59,10 +56,19 @@ export interface UserSession {
     is_active: boolean
 }
 
-export enum FailureReason {
-    SessionAlreadyExists = 'session_already_exists',
-    SessionNotFound = 'session_not_found',
-    SessionNotBelongToUser = 'session_not_belong_to_user',
+export const FAILURE_REASONS = [
+    'session_already_exists',
+    'session_not_found',
+    'session_not_belong_to_user',
+] as const
+export type FailureReason = typeof FAILURE_REASONS[number]
+
+export type Optional<T> = {
+    ok: true,
+    data: T,
+} | {
+    ok: false,
+    reason: FailureReason,
 }
 
 export class Sessions {
@@ -73,10 +79,13 @@ export class Sessions {
         return `session_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
     }
 
-    async create_session(identifier: SessionIdentifier, options: SessionOptions): Promise<Session | FailureReason> {
-        const existing_session = await this.find_participant_session(identifier)
+    create_session(identifier: SessionIdentifier, options: SessionOptions): Optional<Session> {
+        const existing_session = this.find_participant_session(identifier)
         if (existing_session) {
-            return FailureReason.SessionAlreadyExists
+            return {
+                ok: false,
+                reason: 'session_already_exists',
+            }
         }
 
         const session_id = this.generate_session_id()
@@ -87,9 +96,10 @@ export class Sessions {
 
             topic: identifier.topic,
             created_by: identifier.user_id,
-            scope: identifier.scope,
-            group_id: 'group_id' in identifier ? identifier.group_id : '',
+            scope_id: identifier.scope_id,
+            scope_info: identifier.scope_info ?? '',
 
+            // defaults
             ttl: 0,
             ...options,
         }
@@ -101,8 +111,8 @@ export class Sessions {
                 created_at: session.created_at.toISOString(),
                 topic: session.topic,
                 created_by: session.created_by,
-                group_id: session.group_id,
-                scope: session.scope,
+                scope_id: session.scope_id,
+                scope_info: session.scope_info,
                 ttl: session.ttl
             })
 
@@ -110,11 +120,14 @@ export class Sessions {
                 session_id,
                 user_id: session.created_by,
                 joined_at: session.created_at.toISOString(),
-                role: ParticipantRole.Owner,
+                role: 'owner',
             })
         })
 
-        return session
+        return {
+            ok: true,
+            data: session,
+        }
     }
 
     private from_db_session(session: any): Session {
@@ -124,15 +137,15 @@ export class Sessions {
             last_active: new Date(session.last_active),
             topic: session.topic,
             created_by: session.created_by,
-            scope: session.scope,
-            group_id: session.group_id,
+            scope_id: session.scope_id,
+            scope_info: session.scope_info,
             ttl: session.ttl
         }
     }
 
-    async get_session(session_id: string, validate: boolean = true): Promise<Session | null> {
+    get_session(session_id: string, validate: boolean = true): Session | null {
         let session: Session | null = null
-        this.db.transaction(async () => {
+        this.db.transaction(() => {
             const db_session = this.db.get('sessions', { id: session_id }) as any
             if (!db_session) return null
             session = this.from_db_session(db_session)
@@ -144,7 +157,7 @@ export class Sessions {
                 const now = new Date()
                 const last_active = new Date(session.last_active)
                 if (now.getTime() - last_active.getTime() > session.ttl) {
-                    await this.delete_session(session_id)
+                    this.delete_session(session_id)
                     session = null
                     return
                 }
@@ -153,27 +166,65 @@ export class Sessions {
         return session
     }
 
-    async delete_session(session_id: string): Promise<boolean> {
+    delete_session(session_id: string): boolean {
         return this.db.delete('sessions', { id: session_id }).changes > 0
     }
 
-    async get_participant_sessions(user_id: string, validate: boolean = true): Promise<Session[]> {
+    get_participant_sessions(user_id: string, validate: boolean = true): Session[] {
         const sps = this.db.all('session_participants', { user_id }) as any[]
-        const sessions = await Promise.all(sps.map((sp: any) => this.get_session(sp.session_id, validate)))
+        const sessions = sps.map((sp: any) => this.get_session(sp.session_id, validate))
         return sessions.filter((session): session is Session => session !== null)
     }
 
-    async find_participant_session(identifier: SessionIdentifier): Promise<Session | null> {
-        const sessions = await this.get_participant_sessions(identifier.user_id)
+    find_participant_session(identifier: SessionIdentifier): Session | null {
+        const sessions = this.get_participant_sessions(identifier.user_id)
 
         const topic = identifier.topic
-        const scope = identifier.scope
-        const group_id = 'group_id' in identifier ? identifier.group_id : ''
+        const scope_id = identifier.scope_id
+        const scope_info = identifier.scope_info ?? ''
 
         return sessions.find((session) => 
             session.topic === topic &&
-            session.scope === scope &&
-            session.group_id === group_id
+            session.scope_id === scope_id &&
+            session.scope_info === scope_info
         ) ?? null
+    }
+
+    get_or_create_session(identifier: SessionIdentifier, options: SessionOptions): Optional<Session> {
+        const existing_session = this.find_participant_session(identifier)
+        if (existing_session) {
+            return {
+                ok: true,
+                data: existing_session,
+            }
+        }
+        return this.create_session(identifier, options)
+    }
+
+    get_session_variable(session_id: string, key: string) {
+        const variable = this.db.get('session_variables', { session_id, key })?.value as string ?? null
+        if (!variable) {
+            return null
+        }
+        try {
+            return JSON.parse(variable)
+        } catch (error) {
+            return variable
+        }
+    }
+
+    set_session_variable(session_id: string, key: string, value: any) {
+        const variable = JSON.stringify(value)
+        if (this.db.has('session_variables', { session_id, key })) {
+            this.db.update('session_variables', { session_id, key }, { value: variable, updated_at: new Date().toISOString() })
+        } else {
+            this.db.insert('session_variables', {
+                session_id,
+                key,
+                value: variable,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+            })
+        }
     }
 }

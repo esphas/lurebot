@@ -54,7 +54,7 @@ export default async (agent: Agent) => {
 
         if (context.raw_message === '!register') {
             if (!auth.isRegisteredUser(context.user_id)) {
-                auth.createUser(context.user_id)
+                auth.mod('add', 'user', context.user_id)
                 await quick.replyOk(context)
             } else {
                 await quick.reply(context, '你已经注册过了')
