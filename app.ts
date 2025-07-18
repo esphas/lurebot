@@ -1,68 +1,98 @@
 import { format, Logger, transports } from 'winston'
 import { NCWebsocket } from 'node-napcat-ts'
-import chokidar, { FSWatcher } from 'chokidar'
+
+import path from 'path'
+import fs from 'fs'
 
 import { Database } from './db'
 import { Auth } from './auth'
 import { Sessions } from './session'
-import { Agent } from './agent'
+import { Agent, Agents } from './agent'
 import { Quick } from './quick'
 
-export interface AppConfig {
+export type RequiredAppConfig = {
     host: string
     port: number
     accessToken: string
 }
 
+export type OptionalAppConfig = Partial<{
+    dev_mode: boolean
+    protocol: 'ws' | 'wss'
+    log_dir: string
+    log_file_app: string
+    db_path: string
+    agent_dir: string
+}>
+
+export type AppConfig = RequiredAppConfig & OptionalAppConfig
+
 export class App {
-    public dev_mode: boolean = process.env.NODE_ENV === 'development'
-    public logger: Logger
     public napcat: NCWebsocket
     public db: Database
     public auth: Auth
-    public session: Sessions
+    public sessions: Sessions
     public quick: Quick
+    
+    private logger: Logger
+    private agents: Agents
 
-    private agents: Map<string, Agent>
-    private watcher: FSWatcher
+    private config: Required<AppConfig>
 
-    constructor(config: AppConfig) {
-        this.logger = new Logger({
-            level: this.dev_mode ? 'debug' : 'info',
+    private defaultOptionalAppConfig: Required<OptionalAppConfig> = {
+        dev_mode: process.env.NODE_ENV === 'development',
+        protocol: 'ws',
+        log_dir: 'logs',
+        log_file_app: 'app.log',
+        db_path: 'data/app.db',
+        agent_dir: 'agents',
+    }
+
+    constructor(cfg: AppConfig) {
+        this.config = { ...this.defaultOptionalAppConfig, ...cfg }
+
+        fs.mkdirSync(this.config.log_dir, { recursive: true })
+        fs.mkdirSync(path.dirname(this.config.db_path), { recursive: true })
+
+        const logger = new Logger({
+            level: this.config.dev_mode ? 'debug' : 'info',
             format: format.json(),
             transports: [
-                new transports.File({ filename: 'error.log', level: 'error' }),
-                new transports.File({ filename: 'combined.log' })
+                new transports.File({ filename: path.join(this.config.log_dir, this.config.log_file_app) })
             ]
         })
-        if (this.dev_mode) {
-            this.logger.add(new transports.Console({
-                format: format.simple()
+        if (this.config.dev_mode) {
+            logger.add(new transports.Console({
+                format: format.printf(({ level, message, name }) => {
+                    return `[${name}][${level}] ${message}`
+                })
             }))
         }
 
+        this.logger = logger.child({ name: 'App' })
+
         this.napcat = new NCWebsocket({
-            protocol: 'ws',
-            host: config.host,
-            port: config.port,
-            accessToken: config.accessToken,
+            protocol: this.config.protocol,
+            host: this.config.host,
+            port: this.config.port,
+            accessToken: this.config.accessToken,
             throwPromise: true,
             reconnection: {
               enable: true,
               attempts: 10,
               delay: 5000
             }
-        }, this.dev_mode)
+        }, this.config.dev_mode)
 
-        this.db = new Database('data.db', this.logger.child({ name: 'Database' }))
+        this.db = new Database(this.config.db_path, logger.child({ name: 'Database' }))
         
-        this.auth = new Auth(this.db, this.logger.child({ name: 'Auth' }))
-        this.session = new Sessions(this.db, this.logger.child({ name: 'Session' }))
+        this.auth = new Auth(this.db, logger.child({ name: 'Auth' }))
+        this.sessions = new Sessions(this.db, logger.child({ name: 'Session' }))
 
         this.quick = new Quick(this)
 
-        this.agents = new Map()
-        this.watchAgents()
+        this.agents = new Agents(this, this.config.agent_dir, logger.child({ name: 'Agents' }))
+        this.agents.watch()
     }
 
     async start() {
@@ -73,45 +103,5 @@ export class App {
             this.logger.log('error', 'Failed to connect:', error)
             process.exit(1)
         }
-    }
-
-    watchAgents() {
-        const AGENT_DIR = './agents'
-        this.watcher = chokidar.watch(AGENT_DIR, {
-            ignored: /(^|[\/\\])\../,
-            persistent: true
-        })
-
-        this.watcher.on('add', async (path) => {
-            const filename = path.split(/[\\/]/).pop()
-            if (filename && filename.endsWith('.ts')) {
-                if (this.agents.has(filename)) {
-                    await this.agents.get(filename)!.reload()
-                } else {
-                    const agent = new Agent(this, AGENT_DIR, filename)
-                    this.agents.set(filename, agent)
-                    await agent.reload()
-                }
-            }
-        })
-
-        this.watcher.on('change', async (path) => {
-            const filename = path.split(/[\\/]/).pop()
-            if (filename && filename.endsWith('.ts')) {
-                if (this.agents.has(filename)) {
-                    await this.agents.get(filename)!.reload()
-                }
-            }
-        })
-
-        this.watcher.on('unlink', async (path) => {
-            const filename = path.split(/[\\/]/).pop()
-            if (filename && filename.endsWith('.ts')) {
-                if (this.agents.has(filename)) {
-                    await this.agents.get(filename)!.unload()
-                    this.agents.delete(filename)
-                }
-            }
-        })
     }
 }

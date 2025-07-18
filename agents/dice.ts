@@ -1,8 +1,8 @@
 import { Agent } from '../agent'
 
 export default async (agent: Agent) => {
-    const auth = agent.app.auth
-    const quick = agent.app.quick
+    const { auth, quick } = agent.app
+    const logger = agent.logger
     
     const rollDice = (count: number, face: number) => {
         const results: number[] = []
@@ -51,7 +51,7 @@ export default async (agent: Agent) => {
                     }
                 }
                 result += ` = ${sum}`
-                agent.app.logger.log('debug', result)
+                logger.log('debug', result)
                 await quick.reply(context, result)
             }
         }

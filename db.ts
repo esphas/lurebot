@@ -9,6 +9,10 @@ export interface Migration {
     down?: string[]
 }
 
+export class DatabaseCondition {
+    constructor(public op: string, public value: unknown) {}
+}
+
 export class Database {
     private db: sqlite3.Database
 
@@ -27,35 +31,51 @@ export class Database {
         this.logger.log(level, message)
     }
 
+    cond(op: string, value: unknown) {
+        return new DatabaseCondition(op, value)
+    }
+
     _condition(condition: Record<string, unknown>) : string {
         const cond = Object.keys(condition).map(key => {
             let op = '='
             const value = condition[key]
-            if (Array.isArray(value) && value.length === 2) {
-                op = value[0]
+            if (value instanceof DatabaseCondition) {
+                op = value.op
             }
             return `${key} ${op} ?`
         }).join(' and ')
         return cond ? `where ${cond}` : ''
     }
 
+    _values(condition: Record<string, unknown>) {
+        return Object.values(condition).map(value => {
+            if (value instanceof DatabaseCondition) {
+                return value.value
+            }
+            return value
+        })
+    }
+
     get(table: string, condition: Record<string, unknown>, options: { order_by?: string, limit?: number } = {}) {
         const cond = this._condition(condition)
+        const values = this._values(condition)
         const order_by = options.order_by ? `order by ${options.order_by}` : ''
         const limit = options.limit ? `limit ${options.limit}` : ''
-        return this.db.prepare(`select * from ${table} ${cond} ${order_by} ${limit}`).get(...Object.values(condition)) as Record<string, unknown> | undefined
+        return this.db.prepare(`select * from ${table} ${cond} ${order_by} ${limit}`).get(...values) as Record<string, unknown> | undefined
     }
 
     all(table: string, condition: Record<string, unknown>, options: { order_by?: string, limit?: number } = {}) {
         const cond = this._condition(condition)
+        const values = this._values(condition)
         const order_by = options.order_by ? `order by ${options.order_by}` : ''
         const limit = options.limit ? `limit ${options.limit}` : ''
-        return this.db.prepare(`select * from ${table} ${cond} ${order_by} ${limit}`).all(...Object.values(condition)) as Record<string, unknown>[]
+        return this.db.prepare(`select * from ${table} ${cond} ${order_by} ${limit}`).all(...values) as Record<string, unknown>[]
     }
 
     count(table: string, condition: Record<string, unknown>) {
         const cond = this._condition(condition)
-        const result = this.db.prepare(`select count(*) as count from ${table} ${cond}`).get(...Object.values(condition)) as { count: number }
+        const values = this._values(condition)
+        const result = this.db.prepare(`select count(*) as count from ${table} ${cond}`).get(...values) as { count: number }
         return result.count
     }
 
@@ -72,13 +92,19 @@ export class Database {
 
     delete(table: string, condition: Record<string, unknown>) {
         const cond = this._condition(condition)
-        return this.db.prepare(`delete from ${table} ${cond}`).run(...Object.values(condition))
+        const values = this._values(condition)
+        return this.db.prepare(`delete from ${table} ${cond}`).run(...values)
     }
 
     update(table: string, data: Record<string, unknown>, condition: Record<string, unknown>) {
         const cond = this._condition(condition)
         const setters = Object.keys(data).map(key => `${key} = ?`).join(',')
-        return this.db.prepare(`update ${table} set ${setters} ${cond}`).run(...Object.values(data), ...Object.values(condition))
+        const values = this._values(data)
+        return this.db.prepare(`update ${table} set ${setters} ${cond}`).run(...values, ...this._values(condition))
+    }
+
+    prepare(sql: string): Statement {
+        return this.db.prepare(sql)
     }
 
     transaction(callback: () => void) {

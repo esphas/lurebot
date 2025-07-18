@@ -2,7 +2,6 @@ node_modules
 
 .env
 .deploy.env
-data.db*
-combined.log
-error.log
-deploy.log
+
+data/
+logs/

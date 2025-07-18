@@ -1,35 +1,53 @@
 import { Logger } from 'winston'
+
 import { Database } from './db'
+import { AuthScope } from './auth'
 
-export type SessionType = 'private' | 'group'
-
-export interface Session {
-    id: string
-    type: SessionType
-    name?: string
-    context: {
-        messages: Message[]
-        variables: Record<string, any>
-        state: string
-    }
-    last_active: Date
-    created_at: Date
-    created_by: string
+export type SessionIdentifier = {
+    topic: string,
+    user_id: string,
+    scope: AuthScope,
+    group_id?: string,
 }
 
-export interface SessionParticipant {
+export type SessionOptions = Partial<{
+    ttl: number,
+}>
+
+export type Session = {
+    id: string,
+    created_at: Date,
+    last_active: Date,
+    topic: string,
+    created_by: string,
+    scope: AuthScope,
+    group_id?: string,
+} & Required<SessionOptions>
+
+export enum ParticipantRole {
+    Owner = 'owner',
+    Admin = 'admin',
+    Member = 'member'
+}
+
+export interface Participant {
     session_id: string
     user_id: string
+    role: ParticipantRole
     joined_at: Date
-    role: 'owner' | 'admin' | 'member'
-    is_active: boolean
+    last_active: Date
+}
+
+export enum MessageRole {
+    User = 'user',
+    Bot = 'bot'
 }
 
 export interface Message {
-    id?: string
     session_id: string
-    from: 'user' | 'bot'
+    role: MessageRole
     user_id?: string
+    id?: string
     content: string
     timestamp: Date
 }
@@ -41,284 +59,121 @@ export interface UserSession {
     is_active: boolean
 }
 
+export enum FailureReason {
+    SessionAlreadyExists = 'session_already_exists',
+    SessionNotFound = 'session_not_found',
+    SessionNotBelongToUser = 'session_not_belong_to_user',
+}
+
 export class Sessions {
     constructor(private db: Database, private logger: Logger) {
     }
 
-    private generateSessionId(): string {
+    private generate_session_id(): string {
         return `session_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
     }
 
-    async create_session(
-        type: SessionType, 
-        created_by: string, 
-        name?: string, 
-        participants?: string[]
-    ): Promise<Session> {
-        const session_id = this.generateSessionId()
-        
-        const new_session: Session = {
-            id: session_id,
-            type,
-            name,
-            context: {
-                messages: [],
-                variables: {},
-                state: 'idle'
-            },
-            last_active: new Date(),
-            created_at: new Date(),
-            created_by
+    async create_session(identifier: SessionIdentifier, options: SessionOptions): Promise<Session | FailureReason> {
+        const existing_session = await this.find_participant_session(identifier)
+        if (existing_session) {
+            return FailureReason.SessionAlreadyExists
         }
-        
+
+        const session_id = this.generate_session_id()
+        const session: Session = {
+            id: session_id,
+            created_at: new Date(),
+            last_active: new Date(),
+
+            topic: identifier.topic,
+            created_by: identifier.user_id,
+            scope: identifier.scope,
+            group_id: 'group_id' in identifier ? identifier.group_id : '',
+
+            ttl: 0,
+            ...options,
+        }
+
         this.db.transaction(() => {
             this.db.insert('sessions', {
                 id: session_id,
-                type,
-                name: name || null,
-                context: JSON.stringify(new_session.context),
-                last_active: new_session.last_active.toISOString(),
-                created_at: new_session.created_at.toISOString(),
-                created_by
+                last_active: session.last_active.toISOString(),
+                created_at: session.created_at.toISOString(),
+                topic: session.topic,
+                created_by: session.created_by,
+                group_id: session.group_id,
+                scope: session.scope,
+                ttl: session.ttl
             })
-            
+
             this.db.insert('session_participants', {
                 session_id,
-                user_id: created_by,
-                joined_at: new_session.created_at.toISOString(),
-                role: 'owner',
-                is_active: 1
+                user_id: session.created_by,
+                joined_at: session.created_at.toISOString(),
+                role: ParticipantRole.Owner,
             })
-            
-            if (participants) {
-                for (const user_id of participants) {
-                    if (user_id !== created_by) {
-                        this.db.insert('session_participants', {
-                            session_id,
-                            user_id: user_id,
-                            joined_at: new_session.created_at.toISOString(),
-                            role: 'member',
-                            is_active: 1
-                        })
-                    }
+        })
+
+        return session
+    }
+
+    private from_db_session(session: any): Session {
+        return {
+            id: session.id,
+            created_at: new Date(session.created_at),
+            last_active: new Date(session.last_active),
+            topic: session.topic,
+            created_by: session.created_by,
+            scope: session.scope,
+            group_id: session.group_id,
+            ttl: session.ttl
+        }
+    }
+
+    async get_session(session_id: string, validate: boolean = true): Promise<Session | null> {
+        let session: Session | null = null
+        this.db.transaction(async () => {
+            const db_session = this.db.get('sessions', { id: session_id }) as any
+            if (!db_session) return null
+            session = this.from_db_session(db_session)
+            if (!session) return
+
+            if (!validate) return
+
+            if (session.ttl > 0) {
+                const now = new Date()
+                const last_active = new Date(session.last_active)
+                if (now.getTime() - last_active.getTime() > session.ttl) {
+                    await this.delete_session(session_id)
+                    session = null
+                    return
                 }
             }
         })
-        
-        return new_session
+        return session
     }
 
-    async get_sessions(user_id: string): Promise<Session[]> {
-        const participantSessions = this.db.all(
-            'session_participants',
-            { user_id: user_id, is_active: 1 }
-        ) as any[]
-        
-        const sessionIds = participantSessions.map(p => p.session_id)
-        if (sessionIds.length === 0) return []
-        
-        const sessions = this.db.all('sessions', { id: ['in', sessionIds] }) as any[]
-        
-        return sessions.map(session => ({
-            id: session.id,
-            type: session.type,
-            name: session.name,
-            context: JSON.parse(session.context),
-            last_active: new Date(session.last_active),
-            created_at: new Date(session.created_at),
-            created_by: session.created_by
-        }))
+    async delete_session(session_id: string): Promise<boolean> {
+        return this.db.delete('sessions', { id: session_id }).changes > 0
     }
 
-    async get_session(session_id: string): Promise<Session | null> {
-        const session = this.db.get('sessions', { id: session_id }) as any
-        if (!session) return null
-        
-        return {
-            id: session.id,
-            type: session.type,
-            name: session.name,
-            context: JSON.parse(session.context),
-            last_active: new Date(session.last_active),
-            created_at: new Date(session.created_at),
-            created_by: session.created_by
-        }
+    async get_participant_sessions(user_id: string, validate: boolean = true): Promise<Session[]> {
+        const sps = this.db.all('session_participants', { user_id }) as any[]
+        const sessions = await Promise.all(sps.map((sp: any) => this.get_session(sp.session_id, validate)))
+        return sessions.filter((session): session is Session => session !== null)
     }
 
-    async is_participant(session_id: string, user_id: string): Promise<boolean> {
-        const participant = this.db.get('session_participants', { 
-            session_id, 
-            user_id, 
-            is_active: 1 
-        }) as any
-        return !!participant
-    }
+    async find_participant_session(identifier: SessionIdentifier): Promise<Session | null> {
+        const sessions = await this.get_participant_sessions(identifier.user_id)
 
-    async add_participant(session_id: string, user_id: string, role: 'admin' | 'member' = 'member'): Promise<void> {
-        const existing = this.db.get('session_participants', { 
-            session_id, 
-            user_id 
-        }) as any
-        
-        if (existing) {
-            if (!existing.is_active) {
-                this.db.update('session_participants', 
-                    { is_active: 1, role }, 
-                    { session_id, user_id }
-                )
-            }
-        } else {
-            this.db.insert('session_participants', {
-                session_id,
-                user_id,
-                joined_at: new Date().toISOString(),
-                role,
-                is_active: 1
-            })
-        }
-    }
+        const topic = identifier.topic
+        const scope = identifier.scope
+        const group_id = 'group_id' in identifier ? identifier.group_id : ''
 
-    async remove_participant(session_id: string, user_id: string): Promise<void> {
-        this.db.update('session_participants', 
-            { is_active: 0 }, 
-            { session_id, user_id }
-        )
+        return sessions.find((session) => 
+            session.topic === topic &&
+            session.scope === scope &&
+            session.group_id === group_id
+        ) ?? null
     }
-
-    async get_participants(session_id: string): Promise<SessionParticipant[]> {
-        const participants = this.db.all('session_participants', { 
-            session_id, 
-            is_active: 1 
-        }) as any[]
-        
-        return participants.map(p => ({
-            session_id: p.session_id,
-            user_id: p.user_id,
-            joined_at: new Date(p.joined_at),
-            role: p.role,
-            is_active: !!p.is_active
-        }))
-    }
-
-    async update_context(session_id: string, context: Partial<Session['context']>): Promise<void> {
-        const session = this.db.get('sessions', { id: session_id }) as any
-        if (!session) {
-            throw new Error(`Session ${session_id} not found`)
-        }
-        
-        const currentContext = JSON.parse(session.context)
-        const updatedContext = { ...currentContext, ...context }
-        
-        this.db.update('sessions', 
-            { 
-                context: JSON.stringify(updatedContext),
-                last_active: new Date().toISOString()
-            }, 
-            { id: session_id }
-        )
-    }
-
-    async add_message(session_id: string, message: Omit<Message, 'id' | 'session_id'>): Promise<string> {
-        const message_id = `msg_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
-        
-        this.db.transaction(() => {
-            this.db.insert('session_messages', {
-                id: message_id,
-                session_id,
-                from: message.from,
-                user_id: message.user_id || null,
-                content: message.content,
-                timestamp: message.timestamp.toISOString()
-            })
-            
-            this.db.update('sessions', 
-                { last_active: message.timestamp.toISOString() }, 
-                { id: session_id }
-            )
-        })
-        
-        return message_id
-    }
-
-    async get_messages(session_id: string, limit: number = 50, offset: number = 0): Promise<Message[]> {
-        const messages = this.db.all(
-            'session_messages',
-            { session_id },
-            { order_by: 'timestamp desc', limit }
-        ) as any[]
-        
-        return messages.reverse().map(msg => ({
-            id: msg.id,
-            session_id: msg.session_id,
-            from: msg.from,
-            user_id: msg.user_id,
-            content: msg.content,
-            timestamp: new Date(msg.timestamp)
-        }))
-    }
-
-    async get_unread_message_count(session_id: string, user_id: string): Promise<number> {
-        const lastRead = this.db.get('user_session_reads', { 
-            session_id, 
-            user_id 
-        }) as any
-        
-        const lastReadAt = lastRead ? new Date(lastRead.last_read_at) : new Date(0)
-        
-        const unreadCount = this.db.count('session_messages', {
-            session_id,
-            timestamp: ['>', lastReadAt.toISOString()]
-        })
-        
-        return unreadCount
-    }
-
-    async mark_as_read(session_id: string, user_id: string): Promise<void> {
-        const now = new Date().toISOString()
-        
-        const existing = this.db.get('user_session_reads', { 
-            session_id, 
-            user_id 
-        }) as any
-        
-        if (existing) {
-            this.db.update('user_session_reads', 
-                { last_read_at: now }, 
-                { session_id, user_id }
-            )
-        } else {
-            this.db.insert('user_session_reads', {
-                session_id,
-                user_id,
-                last_read_at: now
-            })
-        }
-    }
-
-    async cleanup_expired_sessions(max_age_hours: number = 24): Promise<void> {
-        const cutoff = new Date(Date.now() - max_age_hours * 60 * 60 * 1000)
-        
-        this.db.transaction(() => {
-            const sessions = this.db.all('sessions', { last_active: ['<', cutoff.toISOString()] }) as any[]
-            const sessionIds = sessions.map(s => s.id)
-            
-            if (sessionIds.length > 0) {
-                this.db.delete('session_messages', { session_id: ['in', sessionIds] })
-                this.db.delete('session_participants', { session_id: ['in', sessionIds] })
-                this.db.delete('user_session_reads', { session_id: ['in', sessionIds] })
-                this.db.delete('sessions', { id: ['in', sessionIds] })
-            }
-            
-            this.logger.log('info', `Cleaned up ${sessions.length} expired sessions older than ${max_age_hours} hours`)
-        })
-    }
-
-    async delete_session(session_id: string): Promise<void> {
-        this.db.transaction(() => {
-            this.db.delete('session_messages', { session_id })
-            this.db.delete('session_participants', { session_id })
-            this.db.delete('user_session_reads', { session_id })
-            this.db.delete('sessions', { id: session_id })
-        })
-    }
-} 
+}

@@ -9,7 +9,8 @@ export interface AuthConfig {
 }
 
 export enum AuthScope {
-    System = 'system',
+    Global = 'global',
+    Private = 'private',
     Group = 'group'
 }
 
@@ -76,11 +77,11 @@ export class Auth {
 
     createAdmin(user_id: string | number) {
         this.createUser(user_id)
-        this.db.insert('auth_user_scope_role', { user_id, scope_id: 'system', scope_info: 'system', role_id: 'admin' })
+        this.db.insert('auth_user_scope_role', { user_id, scope_id: AuthScope.Global, scope_info: 'system', role_id: 'admin' })
     }
 
     isAdmin(user_id: string | number) {
-        return this.db.has('auth_user_scope_role', { user_id, scope_id: 'system', scope_info: 'system', role_id: 'admin' })
+        return this.db.has('auth_user_scope_role', { user_id, scope_id: AuthScope.Global, scope_info: 'system', role_id: 'admin' })
     }
 
     isRegisteredUser(user_id: string | number) {
@@ -108,7 +109,7 @@ export class Auth {
             }
         }
 
-        const role = this.db.get('auth_user_scope_role', { user_id, scope_id: 'system', scope_info: 'system' })
+        const role = this.db.get('auth_user_scope_role', { user_id, scope_id: AuthScope.Global, scope_info: 'system' })
         if (role != null) {
             if (this.db.has('auth_role_permission', { role_id: role.role_id, permission_id })) {
                 return true
@@ -139,9 +140,9 @@ export class Auth {
 
     assign_role(user_id: string | number, group_id: string | number | null, role: AuthRole) {
         if (group_id) {
-            this.db.insert('auth_user_scope_role', { user_id, scope_id: 'group', scope_info: group_id, role_id: role })
+            this.db.insert('auth_user_scope_role', { user_id, scope_id: AuthScope.Group, scope_info: group_id, role_id: role })
         } else {
-            this.db.insert('auth_user_scope_role', { user_id, scope_id: 'system', scope_info: 'system', role_id: role })
+            this.db.insert('auth_user_scope_role', { user_id, scope_id: AuthScope.Global, scope_info: '', role_id: role })
         }
     }
 

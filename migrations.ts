@@ -53,21 +53,25 @@ export default [
 
             `create table if not exists sessions (
                 id text primary key,
-                type text not null check (type in ('private', 'group')),
-                name text,
-                context text not null,
-                last_active datetime not null,
                 created_at datetime not null,
+                last_active datetime not null,
+                topic text not null,
                 created_by text not null,
-                foreign key (created_by) references auth_user(user_id) on delete cascade
+                scope text not null,
+                group_id text,
+                ttl integer not null default 0,
+                foreign key (created_by) references auth_user(user_id) on delete cascade,
+                foreign key (scope) references auth_scope(id) on delete cascade,
+                foreign key (group_id) references auth_group(group_id) on delete cascade,
+                unique (created_by, topic, scope, group_id)
             )`,
             
             `create table if not exists session_participants (
                 session_id text not null,
                 user_id text not null,
-                joined_at datetime not null,
                 role text not null check (role in ('owner', 'admin', 'member')),
-                is_active integer not null default 1,
+                joined_at datetime not null,
+                last_active datetime not null,
                 primary key (session_id, user_id),
                 foreign key (session_id) references sessions(id) on delete cascade,
                 foreign key (user_id) references auth_user(user_id) on delete cascade
@@ -76,7 +80,7 @@ export default [
             `create table if not exists session_messages (
                 id text primary key,
                 session_id text not null,
-                from text not null check (from in ('user', 'bot')),
+                role text not null check (role in ('user', 'bot')),
                 user_id text,
                 content text not null,
                 timestamp datetime not null,
