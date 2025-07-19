@@ -1,12 +1,11 @@
 import { Logger } from "winston";
 import { Database, Repository } from "../db";
 import { Auth } from ".";
-import { Roles, Permissions } from "./role_permission";
 
 export interface UserScopeRole {
   user_id: number;
   scope_id: number;
-  role_id: Roles;
+  role_id: string;
 }
 
 export class UserScopeRoleRepository extends Repository<UserScopeRole> {
@@ -26,7 +25,7 @@ export class UserScopeRoleRepository extends Repository<UserScopeRole> {
     };
   }
 
-  change(user_id: number, scope_id: number, role_id: Roles) {
+  change(user_id: number, scope_id: number, role_id: string) {
     return this.upsert({ user_id, scope_id, role_id }, { user_id, scope_id });
   }
 
@@ -49,7 +48,7 @@ export class UserScopeRoleRepository extends Repository<UserScopeRole> {
   can(
     user_id: number,
     scope_id: number,
-    permission: Permissions,
+    permission: string,
     include_global: boolean = true,
   ) {
     const permissions = this.get_permissions(user_id, scope_id);

@@ -8,12 +8,12 @@ import {
   RoleRepository,
   PermissionRepository,
   RolePermissionRepository,
-  Roles,
-  Permissions,
 } from "./role_permission";
 import { UserScopeRoleRepository } from "./user_scope_role";
 
-export type { ScopeType, Roles, Permissions };
+import init from "./init";
+
+export type { ScopeType };
 
 export class Auth {
   public user: UserRepository;
@@ -44,10 +44,22 @@ export class Auth {
       this.logger,
     );
 
+    this.init();
+  }
+
+  init() {
     this.scope.global();
-    this.role.init();
-    this.permission.init();
-    this.role_permission.init();
+    for (const role of init.roles) {
+      this.role.add(role);
+    }
+    for (const permission of init.permissions) {
+      this.permission.add(permission);
+    }
+    for (const role_permission of init.role_permissions) {
+      for (const permission of role_permission.permissions) {
+        this.role_permission.allow(role_permission.role, permission);
+      }
+    }
   }
 
   from_napcat(context: { user_id: number; group_id?: number }) {
@@ -58,7 +70,7 @@ export class Auth {
     };
   }
 
-  assign(user_id: number, scope_id: number, role_id: Roles) {
+  assign(user_id: number, scope_id: number, role_id: string) {
     return this.user_scope_role.change(user_id, scope_id, role_id);
   }
 
@@ -69,7 +81,7 @@ export class Auth {
   can(
     user_id: number,
     scope_id: number,
-    permission: Permissions,
+    permission: string,
     include_global: boolean = true,
   ) {
     return this.user_scope_role.can(

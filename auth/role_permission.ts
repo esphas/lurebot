@@ -2,26 +2,17 @@ import { Logger } from "winston";
 import { Database, Repository } from "../db";
 import { Auth } from ".";
 
-const ROLES = ["admin", "moderator", "user"] as const;
-export type Roles = (typeof ROLES)[number];
 export interface Role {
-  id: Roles;
+  id: string;
 }
 
-const PERMISSIONS = ["root", "moderate", "chat"] as const;
-export type Permissions = (typeof PERMISSIONS)[number];
 export interface Permission {
-  id: Permissions;
+  id: string;
 }
 
-const BASIC_ROLE_PERMISSIONS: Record<Roles, Permissions[]> = {
-  admin: ["root", "moderate", "chat"],
-  moderator: ["moderate", "chat"],
-  user: ["chat"],
-};
 export interface RolePermission {
-  role_id: Roles;
-  permission_id: Permissions;
+  role_id: string;
+  permission_id: string;
 }
 
 export class RoleRepository extends Repository<Role> {
@@ -39,17 +30,11 @@ export class RoleRepository extends Repository<Role> {
     };
   }
 
-  init() {
-    for (const role of ROLES) {
-      this.add(role);
-    }
-  }
-
-  private add(id: Roles) {
+  add(id: string) {
     this.insert({ id }, "ignore");
   }
 
-  get_permissions(role_id: Roles) {
+  get_permissions(role_id: string) {
     return this.auth.role_permission
       .select({ role_id })
       .map((rp) => rp.permission_id);
@@ -71,17 +56,11 @@ export class PermissionRepository extends Repository<Permission> {
     };
   }
 
-  init() {
-    for (const permission of PERMISSIONS) {
-      this.add(permission);
-    }
-  }
-
-  private add(id: Permissions) {
+  add(id: string) {
     this.insert({ id }, "ignore");
   }
 
-  get_roles(permission_id: Permissions) {
+  get_roles(permission_id: string) {
     return this.auth.role_permission
       .select({ permission_id })
       .map((rp) => rp.role_id);
@@ -104,23 +83,15 @@ export class RolePermissionRepository extends Repository<RolePermission> {
     };
   }
 
-  init() {
-    for (const role of ROLES) {
-      for (const permission of BASIC_ROLE_PERMISSIONS[role]) {
-        this.allow(role, permission);
-      }
-    }
-  }
-
-  has(role_id: Roles, permission_id: Permissions) {
+  has(role_id: string, permission_id: string) {
     return this.exists({ role_id, permission_id });
   }
 
-  allow(role_id: Roles, permission_id: Permissions) {
+  allow(role_id: string, permission_id: string) {
     this.insert({ role_id, permission_id }, "ignore");
   }
 
-  deny(role_id: Roles, permission_id: Permissions) {
+  deny(role_id: string, permission_id: string) {
     this.delete({ role_id, permission_id });
   }
 }
