@@ -68,8 +68,12 @@ class DeployWebhook {
             process.chdir(this.config.projectPath)
             const { stdout: prevCommitRaw } = await execAsync('git rev-parse HEAD')
             const prevCommit = prevCommitRaw.trim()
+
+            const { stdout: resetOutput } = await execAsync('git reset --hard')
+            this.log(`重置输出: ${resetOutput}`)
             const { stdout: pullOutput } = await execAsync('git pull origin main')
             this.log(`拉取输出: ${pullOutput}`)
+
             const { stdout: currentCommitRaw } = await execAsync('git rev-parse HEAD')
             const currentCommit = currentCommitRaw.trim()
             if (currentCommit === prevCommit) {
