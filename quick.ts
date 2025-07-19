@@ -1,4 +1,4 @@
-import { Structs } from 'node-napcat-ts'
+import { SendMessageSegment, Structs } from 'node-napcat-ts'
 import { App } from './app'
 
 export class Quick {
@@ -8,18 +8,29 @@ export class Quick {
         await new Promise(resolve => setTimeout(resolve, Math.floor(Math.random() * (max - min + 1)) + min))
     }
 
-    async log_error(context, text: string) {
+    async log_error(context: {
+        user_id: number
+        group_id?: number
+        sender: {
+            user_id: number
+            nickname: string
+        }
+        raw_message: string
+    }, text: string) {
         const { auth, napcat: ncat } = this.app
-        const listeners = auth.get_error_report_listeners(context.group_id)
+        const { scope } = auth.from_napcat(context)
+        const listeners = auth.get_error_notify_users(scope.id)
         for (const listener of listeners) {
             await ncat.send_forward_msg({
                 user_id: Number(listener),
                 message: [{
                     type: 'node',
                     data: {
-                        user_id: context.sender.user_id,
+                        user_id: String(context.sender.user_id),
                         nickname: context.sender.nickname,
-                        content: context.message
+                        content: [
+                            Structs.text(context.raw_message),
+                        ]
                     }
                 }]
             })
@@ -32,7 +43,7 @@ export class Quick {
         }
     }
 
-    async reply(context, text: string) {
+    async reply(context: { user_id: number, group_id?: number, message_id: number }, text: string) {
         await this.app.napcat.send_msg({
             user_id: context.user_id,
             group_id: context.group_id,
@@ -41,17 +52,5 @@ export class Quick {
                 Structs.text(text)
             ]
         })
-    }
-
-    async replyStatus(context, result: boolean) {
-        await this.reply(context, result ? '√' : '×')
-    }
-
-    async replyOk(context) {
-        await this.replyStatus(context, true)
-    }
-
-    async replyError(context) {
-        await this.replyStatus(context, false)
     }
 }

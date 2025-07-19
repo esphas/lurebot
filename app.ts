@@ -82,7 +82,7 @@ export class App {
               attempts: 10,
               delay: 5000
             }
-        }, this.config.dev_mode)
+        }, false)
 
         this.db = new Database(this.config.db_path, logger.child({ name: 'Database' }))
         

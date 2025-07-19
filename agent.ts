@@ -1,5 +1,5 @@
 import { Logger } from 'winston'
-import { EventHandleMap, EventKey, SocketHandler } from 'node-napcat-ts'
+import { EventHandleMap, EventKey } from 'node-napcat-ts'
 import chokidar, { FSWatcher } from 'chokidar'
 
 import { App } from './app'
@@ -13,25 +13,27 @@ export class Agent {
     constructor(public app: App, public dir: string, public file: string, public logger: Logger) {
     }
 
-    on<T extends EventKey>(event: T, handler: EventHandleMap[T]) {
+    on<T extends EventKey>(event: T, handler: EventHandleMap[T], name?: string) {
         if (this.listeners.has(handler as EventHandleMap[EventKey])) {
             return
         }
-        this.logger.log('debug', `Registering event ${event} for agent ${this.file}`)
+        this.logger.log('debug', `Registering event ${event} for agent ${this.file}${name ? ` (${name})` : ''}`)
         /** @ts-ignore */
         const fn: EventHandleMap[T] = async (context) => {
             try {
                 await handler(context)
             } catch (error) {
-                const details = `Error in agent ${this.file} on event ${event}: ${error}`
+                const details = `Error in agent ${this.file} on event ${event} ${name ? `(${name})` : ''}:\n${ error instanceof Error ? error.stack : String(error)}`
                 this.logger.log('error', details)
-                this.app.quick.log_error(context, details)
+                if ('user_id' in context && 'raw_message' in context) {
+                    this.app.quick.log_error(context, details)
+                }
                 this.app.napcat.off(event, fn)
                 this.listeners.delete(handler)
             }
         }
         this.app.napcat.on(event, fn)
-        this.listeners.set(handler, [event as EventKey, fn])
+        this.listeners.set(handler, [event as T, fn])
     }
 
     off<T extends EventKey>(event: T, handler: EventHandleMap[T]) {
@@ -40,26 +42,6 @@ export class Agent {
             this.app.napcat.off(event, fn)
             this.listeners.delete(handler)
         }
-    }
-
-    once<T extends EventKey>(event: T, handler: EventHandleMap[T]) {
-        if (this.listeners.has(handler)) {
-            return
-        }
-        this.logger.log('debug', `Registering event ${event} for agent ${this.file}`)
-        const fn: EventHandleMap[T] = async (context) => {
-            try {
-                await handler(context)
-            } catch (error) {
-                const details = `Error in agent ${this.file} on event ${event}: ${error}`
-                this.logger.log('error', details)
-                this.app.quick.log_error(context, details)
-            }
-            this.app.napcat.off(event, fn)
-            this.listeners.delete(handler)
-        }
-        this.app.napcat.on(event, fn)
-        this.listeners.set(handler, [event, fn])
     }
 
     async reload() {
@@ -96,14 +78,13 @@ export class Agents {
     private watcher: FSWatcher
 
     constructor(public app: App, public dir: string, public logger: Logger) {
-    }
-
-    async watch() {
         this.watcher = chokidar.watch(this.dir, {
             ignored: /(^|[\/\\])\../,
             persistent: true
         })
+    }
 
+    async watch() {
         this.watcher.on('add', async (path) => {
             const filename = path.split(/[\\/]/).pop()
             if (filename && filename.endsWith('.ts')) {

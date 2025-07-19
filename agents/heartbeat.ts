@@ -1,15 +1,16 @@
 import { Agent } from '../agent'
 
 export default async (agent: Agent) => {
-    const { auth, napcat: ncat, quick } = agent.app
+    const { auth, napcat } = agent.app
 
     agent.on('notice.notify.poke', async (context) => {
-        if (context.target_id === context.self_id && auth.can(context, 'chat')) {
-            await quick.wait_random(10, 790)
-            await ncat.send_poke({
-                user_id: context.user_id,
-                group_id: 'group_id' in context ? context.group_id : undefined
-            })
-        }
+        if (context.target_id !== context.self_id) { return }
+        const { user, group, scope } = auth.from_napcat(context)
+        if (!auth.can(user.id, scope.id, 'chat')) { return }
+
+        await napcat.send_poke({
+            user_id: user.qq!,
+            group_id: group?.qq ?? undefined
+        })
     })
 }
