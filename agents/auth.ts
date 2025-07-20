@@ -101,6 +101,30 @@ export default async (agent: Agent) => {
     }
   });
 
+  agent.on("message", async (context) => {
+    const match = context.raw_message.match(/^!(trust|untrust)\s*(\d+)\s*$/);
+    if (!match) {
+      return;
+    }
+    const { user, scope } = auth.from_napcat(context);
+    if (!auth.can(user.id, scope.id, "moderate")) {
+      return;
+    }
+
+    const trust = match[1] === "trust";
+    const user_qq = Number(match[2]);
+    const new_user = auth.user.from_napcat({ user_id: user_qq });
+    if (trust) {
+      auth.assign(new_user.id, scope.id, "trusted");
+    } else {
+      auth.revoke(new_user.id, scope.id);
+    }
+    await quick.reply(
+      context,
+      `ok, ${trust ? "信任" : "取消信任"} ${new_user.qq}`,
+    );
+  });
+
   agent.on("message.group", async (context) => {
     const match = context.raw_message.match(/^!(register|unregister)\s*$/);
     if (!match) {
