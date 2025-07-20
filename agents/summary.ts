@@ -19,7 +19,7 @@ export default async (agent: Agent) => {
       return;
     }
 
-    const count = match[1] ? parseInt(match[1]) : 300;
+    const count = Math.min(match[1] ? parseInt(match[1]) : 300, 500);
     const model = match[2] || llm.default_model;
     const question = match[3];
 
