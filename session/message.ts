@@ -59,8 +59,8 @@ export class SessionMessageRepository extends Repository<
     if (options.digest && options.digest !== "all") {
       where.digested = cond.eq(options.digest === "digested");
     }
-    if (options.with_digest) {
-      where.is_digest = true;
+    if (!options.with_digest) {
+      where.is_digest = false;
     }
     const messages = this.select(where, {
       limit: options.limit,
