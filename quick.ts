@@ -26,21 +26,22 @@ export class Quick {
     const { scope } = auth.from_napcat(context);
     const listeners = auth.get_error_notify_users(scope.id);
     for (const listener of listeners) {
-      await ncat.send_forward_msg({
-        user_id: Number(listener),
-        message: [
-          {
-            type: "node",
-            data: {
-              user_id: String(context.sender.user_id),
-              nickname: context.sender.nickname,
-              content: [Structs.text(context.raw_message)],
-            },
-          },
-        ],
-      });
+      // await ncat.send_forward_msg({
+      //   user_id: Number(listener),
+      //   message: [
+      //     {
+      //       type: "node",
+      //       data: {
+      //         user_id: String(context.sender.user_id),
+      //         nickname: context.sender.nickname,
+      //         content: [Structs.text(context.raw_message)],
+      //       },
+      //     },
+      //   ],
+      // });
+      console.log(`notify error to ${listener.qq}: ${text}`);
       await ncat.send_msg({
-        user_id: Number(listener),
+        user_id: listener.qq!,
         message: [Structs.text(text)],
       });
     }

@@ -100,11 +100,19 @@ export class Auth {
         role_id: cond.in(...available_roles),
       })
       .map((r) => r.user_id);
-    if (user_ids.length === 0) {
+    const global_user_ids = this.user_scope_role
+      .select({
+        scope_id: this.scope.global().id,
+        role_id: cond.in(...available_roles),
+      })
+      .map((r) => r.user_id);
+    const all_user_ids = [...user_ids, ...global_user_ids];
+    if (all_user_ids.length === 0) {
       return [];
     }
     return this.user.select({
-      id: cond.in(...user_ids),
+      id: cond.in(...all_user_ids),
+      error_notify: true,
     });
   }
 }

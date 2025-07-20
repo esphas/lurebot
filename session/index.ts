@@ -5,6 +5,7 @@ import { Database } from "../db";
 import { Session, SessionRepository } from "./session";
 import { ParticipantRepository } from "./participant";
 import { SessionVariableRepository } from "./variable";
+import { SessionMessageRepository } from "./message";
 
 export const FAILURE_REASONS = [
   "session_already_exists",
@@ -27,6 +28,7 @@ export class Sessions {
   private session: SessionRepository;
   private participant: ParticipantRepository;
   private variable: SessionVariableRepository;
+  private message: SessionMessageRepository;
 
   constructor(
     private db: Database,
@@ -35,6 +37,7 @@ export class Sessions {
     this.session = new SessionRepository(db, logger);
     this.participant = new ParticipantRepository(db, logger);
     this.variable = new SessionVariableRepository(db, logger);
+    this.message = new SessionMessageRepository(db, logger);
   }
 
   private generate_session_id(): string {
@@ -140,5 +143,31 @@ export class Sessions {
 
   set_variable<T>(session_id: string, key: string, value: T) {
     return this.variable.set_value<T>(session_id, key, value);
+  }
+
+  get_message_history(
+    session_id: string,
+    options: {
+      limit?: number;
+      since?: Date;
+      digest?: "digested" | "undigested" | "all";
+      with_digest?: boolean;
+    } = {},
+  ) {
+    return this.message.get_messages(session_id, options);
+  }
+
+  add_message(
+    session_id: string,
+    message: {
+      role: "user" | "assistant" | "system";
+      content: string;
+    },
+  ) {
+    return this.message.insert({
+      session_id,
+      role: message.role,
+      content: message.content,
+    });
   }
 }

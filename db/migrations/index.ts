@@ -96,6 +96,17 @@ export default [
                 primary key (session_id, key),
                 foreign key (session_id) references sessions(id) on delete cascade
             )`,
+
+      `create table if not exists session_messages (
+                id integer primary key,
+                session_id text not null,
+                role text not null,
+                content text not null,
+                digested integer not null default 0,
+                is_digest integer not null default 0,
+                created_at text not null default (datetime('now', 'localtime')),
+                foreign key (session_id) references sessions(id) on delete cascade
+            )`,
     ],
   },
 ] as Migration[];

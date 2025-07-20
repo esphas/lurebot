@@ -11,6 +11,9 @@ async function main() {
   const port = Number(process.env.NAPCAT_PORT);
   const accessToken = process.env.NAPCAT_ACCESS_TOKEN ?? "";
 
+  const llm_endpoint = process.env.LLM_ENDPOINT;
+  const llm_api_key = process.env.LLM_API_KEY;
+
   if (!host || !port) {
     throw new Error("NAPCAT_HOST and NAPCAT_PORT must be set");
   }
@@ -19,6 +22,8 @@ async function main() {
     host,
     port,
     accessToken,
+    llm_endpoint,
+    llm_api_key,
   });
 
   await app.start();

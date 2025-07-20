@@ -9,6 +9,7 @@ import { Auth } from "./auth";
 import { Sessions } from "./session";
 import { Agents } from "./agent";
 import { Quick } from "./quick";
+import { LLM } from "./llm";
 
 export type RequiredAppConfig = {
   host: string;
@@ -23,6 +24,8 @@ export type OptionalAppConfig = Partial<{
   log_file_app: string;
   db_path: string;
   agent_dir: string;
+  llm_endpoint: string;
+  llm_api_key: string;
 }>;
 
 export type AppConfig = RequiredAppConfig & OptionalAppConfig;
@@ -33,6 +36,7 @@ export class App {
   public auth: Auth;
   public sessions: Sessions;
   public quick: Quick;
+  public llm: LLM;
 
   private logger: Logger;
   private agents: Agents;
@@ -46,6 +50,8 @@ export class App {
     log_file_app: "app.log",
     db_path: "data/app.db",
     agent_dir: "agents",
+    llm_endpoint: "",
+    llm_api_key: "",
   };
 
   constructor(cfg: AppConfig) {
@@ -98,6 +104,8 @@ export class App {
 
     this.auth = new Auth(this.db, logger.child({ name: "Auth" }));
     this.sessions = new Sessions(this.db, logger.child({ name: "Session" }));
+
+    this.llm = new LLM(this, this.config.llm_endpoint, this.config.llm_api_key);
 
     this.quick = new Quick(this);
 
