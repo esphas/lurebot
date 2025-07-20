@@ -5,6 +5,7 @@ import { Auth, GeneralNapcatMessage } from ".";
 export interface Group {
   id: number;
   qq: number | null;
+  qq_name: string;
   registered: boolean;
   banned_until: Date | null;
   created_at: Date;
@@ -13,6 +14,7 @@ export interface Group {
 export interface GroupDB {
   id: number;
   qq: number;
+  qq_name: string;
   registered: 0 | 1;
   banned_until: string;
   created_at: string;
@@ -31,6 +33,7 @@ export class GroupRepository extends Repository<Group, GroupDB> {
     return {
       id: this.tf.id,
       qq: this.tf.id_or(0),
+      qq_name: this.tf.id,
       registered: this.tf.bool,
       banned_until: this.tf.date_or(""),
       created_at: this.tf.date,
