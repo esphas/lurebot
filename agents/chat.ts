@@ -1,3 +1,5 @@
+import ms from "ms";
+
 import { Agent } from "../agent";
 
 export default async (agent: Agent) => {
@@ -35,7 +37,7 @@ export default async (agent: Agent) => {
       await quick.reply(context, `正在思考... (${model})`);
       const response = await llm.chat(session_id, user_message, model);
       const end_time = Date.now();
-      const duration = (end_time - start_time).toLocaleString();
+      const duration = ms(end_time - start_time);
       const content = response.content;
       sessions.add_message(session_id, {
         role: "user",

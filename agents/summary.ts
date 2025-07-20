@@ -1,4 +1,6 @@
 import { WSSendReturn } from "node-napcat-ts";
+import ms from "ms";
+
 import { Agent } from "../agent";
 import { LLMMessage } from "../llm";
 
@@ -55,7 +57,7 @@ export default async (agent: Agent) => {
       const response = await llm.chat_completions(messages, model);
 
       const end_time = Date.now();
-      const duration = (end_time - start_time).toLocaleString();
+      const duration = ms(end_time - start_time);
 
       const content = response.content;
       await quick.reply(context, `[${duration}] ${content}`);
