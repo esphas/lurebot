@@ -18,7 +18,7 @@ export default async (agent: Agent) => {
     try {
       const func = new Function(script).bind(agent.app);
       const result = func();
-      await quick.reply(context, result);
+      await quick.reply(context, JSON.stringify(result, null, 2));
     } catch (error) {
       if (error instanceof Error) {
         await quick.reply(context, `Error: ${error.message} ${error.stack}`);
