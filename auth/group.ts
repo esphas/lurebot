@@ -58,11 +58,11 @@ export class GroupRepository extends Repository<Group, GroupDB> {
       banned_until = new Date();
       banned_until.setFullYear(banned_until.getFullYear() + 1);
     }
-    this.update({ id }, { banned_until });
+    this.update({ banned_until }, { id });
   }
 
   unban(id: number) {
-    this.update({ id }, { banned_until: null });
+    this.update({ banned_until: null }, { id });
   }
 
   is_banned(id: number, time: Date = new Date()) {
@@ -74,11 +74,11 @@ export class GroupRepository extends Repository<Group, GroupDB> {
   }
 
   register(id: number) {
-    return this.update({ id }, { registered: true });
+    return this.update({ registered: true }, { id });
   }
 
   unregister(id: number) {
-    return this.update({ id }, { registered: false });
+    return this.update({ registered: false }, { id });
   }
 
   is_registered(id: number) {
