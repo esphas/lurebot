@@ -46,8 +46,6 @@ export default async (agent: Agent) => {
           content: [
             `你正处在一个群聊中，以下是该群聊最近的聊天记录，请根据这些记录总结出群聊的概况，并回答用户的问题。`,
             `其中 QQ 号为 ${context.self_id} 的是你。`,
-            `由于聊天环境为群聊，请避免使用 Markdown 格式，以方便用户阅读。`,
-            `下面是聊天记录：`,
           ].join("\n"),
         },
         {
