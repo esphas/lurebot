@@ -8,7 +8,7 @@ export type LLMResponse = {
 
 export class LLM {
   public is_ready: boolean;
-  public model: string = "deepseek-ai/DeepSeek-R1";
+  public default_model: string = "Qwen/QwQ-32B";
 
   constructor(
     private app: App,
@@ -18,7 +18,11 @@ export class LLM {
     this.is_ready = this.endpoint !== "" && this.api_key !== "";
   }
 
-  async chat(session_id: string, user_message: string): Promise<LLMResponse> {
+  async chat(
+    session_id: string,
+    user_message: string,
+    model: string = this.default_model,
+  ): Promise<LLMResponse> {
     if (!this.is_ready) {
       throw new Error("LLM is not ready");
     }
@@ -43,7 +47,7 @@ export class LLM {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: this.model,
+        model,
         messages: messages,
       }),
     });
