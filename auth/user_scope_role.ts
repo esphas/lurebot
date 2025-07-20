@@ -51,6 +51,23 @@ export class UserScopeRoleRepository extends Repository<UserScopeRole> {
     permission: string,
     include_global: boolean = true,
   ) {
+    if (!this.auth.user.is_valid(user_id)) {
+      return false;
+    }
+    const scope = this.auth.scope.get({ id: scope_id });
+    if (scope == null) {
+      return false;
+    }
+    if (
+      scope.type == "group" &&
+      !this.auth.group.is_valid(Number(scope.extra))
+    ) {
+      return false;
+    }
+    const role = this.get_role(user_id, scope_id);
+    if (role == null) {
+      this.change(user_id, scope_id, "user");
+    }
     const permissions = this.get_permissions(user_id, scope_id);
     if (include_global) {
       permissions.push(

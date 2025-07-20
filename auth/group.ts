@@ -94,6 +94,9 @@ export class GroupRepository extends Repository<Group, GroupDB> {
     if (group == null) {
       return false;
     }
-    return this.is_registered(id) && !this.is_banned(id, time);
+    return (
+      group.registered &&
+      !(group.banned_until != null && group.banned_until > time)
+    );
   }
 }

@@ -66,11 +66,10 @@ export class UserRepository extends Repository<User, UserDB> {
   }
 
   is_banned(id: number, time: Date = new Date()) {
-    const users = this.select({ id });
-    if (users.length === 0) {
+    const user = this.get({ id });
+    if (user == null) {
       return false;
     }
-    const user = users[0];
     return user.banned_until != null && user.banned_until > time;
   }
 
@@ -83,19 +82,18 @@ export class UserRepository extends Repository<User, UserDB> {
   }
 
   is_registered(id: number) {
-    const users = this.select({ id });
-    if (users.length === 0) {
+    const user = this.get({ id });
+    if (user == null) {
       return false;
     }
-    return users[0].registered;
+    return user.registered;
   }
 
   is_valid(id: number, time: Date = new Date()) {
-    const users = this.select({ id });
-    if (users.length === 0) {
+    const user = this.get({ id });
+    if (user == null) {
       return false;
     }
-    const user = users[0];
     return (
       user.registered &&
       !(user.banned_until != null && user.banned_until > time)
