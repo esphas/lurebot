@@ -31,7 +31,6 @@ export default async (agent: Agent) => {
     const session_id = llm_session.data.id;
 
     try {
-      // timing
       const start_time = Date.now();
       await quick.reply(context, `正在思考... (${model})`);
       const response = await llm.chat(session_id, user_message, model);

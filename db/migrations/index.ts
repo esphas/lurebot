@@ -109,4 +109,17 @@ export default [
             )`,
     ],
   },
+  {
+    version: 2,
+    up: [
+      `alter table auth_user add column qq_name text not null default ''`,
+      `alter table auth_group add column qq_name text not null default ''`,
+      `alter table auth_user_scope_role add column qq_name text not null default ''`,
+    ],
+    down: [
+      `alter table auth_user drop column qq_name`,
+      `alter table auth_group drop column qq_name`,
+      `alter table auth_user_scope_role drop column qq_name`,
+    ],
+  },
 ] as Migration[];

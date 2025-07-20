@@ -1,5 +1,11 @@
 import { App } from "./app";
 
+export type LLMMessage = {
+  role: "system" | "user" | "assistant";
+  content: string;
+  reasoning_content?: string;
+};
+
 export type LLMResponse = {
   role: "assistant";
   content: string;
@@ -39,6 +45,13 @@ export class LLM {
 
     messages.push({ role: "user", content: user_message });
 
+    return await this.chat_completions(messages, model);
+  }
+
+  async chat_completions(
+    messages: LLMMessage[],
+    model: string = this.default_model,
+  ) {
     const endpoint = this.endpoint + "/chat/completions";
     const response = await fetch(endpoint, {
       method: "POST",
@@ -51,10 +64,7 @@ export class LLM {
         messages: messages,
       }),
     });
-
     const data = await response.json();
-    const message = data.choices[0].message;
-
-    return message;
+    return data.choices[0].message as LLMResponse;
   }
 }

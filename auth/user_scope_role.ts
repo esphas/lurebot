@@ -6,6 +6,7 @@ export interface UserScopeRole {
   user_id: number;
   scope_id: number;
   role_id: string;
+  qq_name: string;
 }
 
 export class UserScopeRoleRepository extends Repository<UserScopeRole> {
@@ -22,6 +23,7 @@ export class UserScopeRoleRepository extends Repository<UserScopeRole> {
       user_id: this.tf.id,
       scope_id: this.tf.id,
       role_id: this.tf.id,
+      qq_name: this.tf.id,
     };
   }
 
@@ -33,8 +35,12 @@ export class UserScopeRoleRepository extends Repository<UserScopeRole> {
     return this.delete({ user_id, scope_id });
   }
 
+  find(user_id: number, scope_id: number) {
+    return this.get({ user_id, scope_id });
+  }
+
   get_role(user_id: number, scope_id: number) {
-    return this.get({ user_id, scope_id })?.role_id ?? null;
+    return this.find(user_id, scope_id)?.role_id ?? null;
   }
 
   get_permissions(user_id: number, scope_id: number) {
@@ -63,10 +69,6 @@ export class UserScopeRoleRepository extends Repository<UserScopeRole> {
       !this.auth.group.is_valid(Number(scope.extra))
     ) {
       return false;
-    }
-    const role = this.get_role(user_id, scope_id);
-    if (role == null) {
-      this.change(user_id, scope_id, "user");
     }
     const permissions = this.get_permissions(user_id, scope_id);
     if (include_global) {

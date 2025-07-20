@@ -1,10 +1,11 @@
 import { Logger } from "winston";
 import { Database, Repository } from "../db";
-import { Auth } from ".";
+import { Auth, GeneralNapcatMessage } from ".";
 
 export interface User {
   id: number;
   qq: number | null;
+  qq_name: string;
   registered: boolean;
   banned_until: Date | null;
   error_notify: boolean;
@@ -14,6 +15,7 @@ export interface User {
 export interface UserDB {
   id: number;
   qq: number;
+  qq_name: string;
   registered: 0 | 1;
   banned_until: string;
   error_notify: 0 | 1;
@@ -33,6 +35,7 @@ export class UserRepository extends Repository<User, UserDB> {
     return {
       id: this.tf.id,
       qq: this.tf.id_or(0),
+      qq_name: this.tf.id,
       registered: this.tf.bool,
       banned_until: this.tf.date_or(""),
       error_notify: this.tf.bool,
@@ -40,12 +43,18 @@ export class UserRepository extends Repository<User, UserDB> {
     };
   }
 
-  from_napcat({ user_id: qq }: { user_id: number }) {
+  from_napcat(context: GeneralNapcatMessage) {
+    const qq = context.user_id;
     const user = this.get({ qq });
+    const nickname = context.sender?.nickname ?? "";
     if (user) {
+      if (!context.group_id && nickname && user.qq_name !== nickname) {
+        user.qq_name = nickname;
+        this.update({ qq_name: nickname }, { id: user.id });
+      }
       return user;
     }
-    const new_user = this.insert({ qq });
+    const new_user = this.insert({ qq, qq_name: nickname });
     if (!new_user) {
       throw new Error("Failed to create user");
     }

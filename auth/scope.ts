@@ -1,6 +1,6 @@
 import { Logger } from "winston";
 import { Database, Repository } from "../db";
-import { Auth } from ".";
+import { Auth, GeneralNapcatMessage } from ".";
 
 export type ScopeType = "global" | "private" | "group";
 
@@ -51,19 +51,31 @@ export class ScopeRepository extends Repository<Scope, ScopeDB> {
     return this.get({ type: "group", extra: String(group_id) })!;
   }
 
-  from_napcat({ user_id, group_id }: { user_id?: number; group_id?: number }) {
-    if (group_id) {
-      const group = this.auth.group.from_napcat({ group_id });
+  from_napcat(context: GeneralNapcatMessage) {
+    const user = this.auth.user.from_napcat(context);
+    const nickname = context.sender?.nickname ?? "";
+    if (context.group_id) {
+      const group = this.auth.group.from_napcat(context);
       if (group != null) {
-        return this.group(group.id);
+        const scope = this.group(group.id);
+        let usr = this.auth.user_scope_role.find(user.id, scope.id);
+        if (usr == null) {
+          usr = this.auth.user_scope_role.change(user.id, scope.id, "user");
+        }
+        if (nickname && usr.qq_name !== nickname) {
+          this.auth.user_scope_role.update(
+            { qq_name: nickname },
+            { user_id: user.id, scope_id: scope.id },
+          );
+        }
+        return scope;
       }
     }
-    if (user_id) {
-      const user = this.auth.user.from_napcat({ user_id });
-      if (user != null) {
-        return this.private(user.id);
-      }
+    const scope = this.private(user.id);
+    const usr = this.auth.user_scope_role.find(user.id, scope.id);
+    if (usr == null) {
+      this.auth.user_scope_role.change(user.id, scope.id, "user");
     }
-    return this.global();
+    return scope;
   }
 }

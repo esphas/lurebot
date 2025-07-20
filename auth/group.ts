@@ -1,6 +1,6 @@
 import { Logger } from "winston";
 import { Database, Repository } from "../db";
-import { Auth } from ".";
+import { Auth, GeneralNapcatMessage } from ".";
 
 export interface Group {
   id: number;
@@ -37,7 +37,8 @@ export class GroupRepository extends Repository<Group, GroupDB> {
     };
   }
 
-  from_napcat({ group_id: qq }: { group_id?: number }) {
+  from_napcat(context: Omit<GeneralNapcatMessage, "user_id">) {
+    const qq = context.group_id;
     if (qq == null) {
       return null;
     }

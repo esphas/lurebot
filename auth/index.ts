@@ -15,6 +15,14 @@ import init from "./init";
 
 export type { ScopeType };
 
+export type GeneralNapcatMessage = {
+  user_id: number;
+  group_id?: number;
+  sender?: {
+    nickname: string;
+  };
+};
+
 export class Auth {
   public user: UserRepository;
   public group: GroupRepository;
@@ -62,7 +70,7 @@ export class Auth {
     }
   }
 
-  from_napcat(context: { user_id: number; group_id?: number }) {
+  from_napcat(context: GeneralNapcatMessage) {
     return {
       user: this.user.from_napcat(context),
       group: this.group.from_napcat(context),
