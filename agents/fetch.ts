@@ -1,3 +1,4 @@
+import { Structs } from "node-napcat-ts";
 import { Agent } from "../agent";
 
 export default async (agent: Agent) => {
@@ -22,7 +23,7 @@ export default async (agent: Agent) => {
       if (!response.ok) {
         await quick.reply(
           context,
-          `请求失败: ${response.status} ${response.statusText}`,
+          `请求失败: ${response.status} ${response.statusText}\n${url}`,
         );
         return;
       }
@@ -39,9 +40,15 @@ export default async (agent: Agent) => {
           );
         }
       } else if (contentType.includes("image")) {
-        const buffer = await response.arrayBuffer();
-        const base64 = Buffer.from(buffer).toString("base64");
-        await quick.reply(context, `[CQ:image,file=base64://${base64}]`);
+        try {
+          const buffer = Buffer.from(await response.arrayBuffer());
+          await quick.reply(context, [Structs.image(buffer)]);
+        } catch (error) {
+          await quick.reply(
+            context,
+            `图片解析失败: ${error instanceof Error ? error.message : String(error)}`,
+          );
+        }
       } else {
         try {
           const text = await response.text();
