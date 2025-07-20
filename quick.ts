@@ -1,4 +1,4 @@
-import { Structs } from "node-napcat-ts";
+import { SendMessageSegment, Structs } from "node-napcat-ts";
 import { App } from "./app";
 
 export class Quick {
@@ -49,12 +49,20 @@ export class Quick {
 
   async reply(
     context: { user_id: number; group_id?: number; message_id: number },
-    text: string,
+    msg: string | SendMessageSegment | SendMessageSegment[],
   ) {
+    const message: SendMessageSegment[] = [Structs.reply(context.message_id)];
+    if (typeof msg === "string") {
+      message.push(Structs.text(msg));
+    } else if (Array.isArray(msg)) {
+      message.push(...msg);
+    } else {
+      message.push(msg);
+    }
     await this.app.napcat.send_msg({
       user_id: context.user_id,
       group_id: context.group_id,
-      message: [Structs.reply(context.message_id), Structs.text(text)],
+      message,
     });
   }
 }

@@ -38,6 +38,10 @@ export default async (agent: Agent) => {
             `JSON解析失败: ${error instanceof Error ? error.message : String(error)}`,
           );
         }
+      } else if (contentType.includes("image")) {
+        const buffer = await response.arrayBuffer();
+        const base64 = Buffer.from(buffer).toString("base64");
+        await quick.reply(context, `[CQ:image,file=base64://${base64}]`);
       } else {
         try {
           const text = await response.text();
