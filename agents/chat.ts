@@ -31,8 +31,12 @@ export default async (agent: Agent) => {
     const session_id = llm_session.data.id;
 
     try {
-      await quick.reply(context, "正在思考...");
+      // timing
+      const start_time = Date.now();
+      await quick.reply(context, `正在思考... (${model})`);
       const response = await llm.chat(session_id, user_message, model);
+      const end_time = Date.now();
+      const duration = (end_time - start_time).toLocaleString();
       const content = response.content;
       sessions.add_message(session_id, {
         role: "user",
@@ -42,7 +46,7 @@ export default async (agent: Agent) => {
         role: "assistant",
         content: content,
       });
-      await quick.reply(context, content);
+      await quick.reply(context, `[${duration}] ${content}`);
     } catch (error) {
       await quick.reply(context, "LLM 请求失败");
       await quick.log_error(
