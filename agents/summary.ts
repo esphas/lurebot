@@ -9,7 +9,7 @@ export default async (agent: Agent) => {
 
   agent.on("message.group", async (context) => {
     const match = context.raw_message.match(
-      /^.(?:summary)(?:\[(.+)\])?(\s(?:.|\n)+)?$/,
+      /^.(?:summary)(?:-(\d+))?(?:\[(.+)\])?(\s(?:.|\n)+)?$/,
     );
     if (!match) {
       return;
@@ -19,8 +19,9 @@ export default async (agent: Agent) => {
       return;
     }
 
-    const model = match[1] || llm.default_model;
-    const question = match[2];
+    const count = match[1] ? parseInt(match[1]) : 300;
+    const model = match[2] || llm.default_model;
+    const question = match[3];
 
     try {
       const start_time = Date.now();
@@ -34,7 +35,7 @@ export default async (agent: Agent) => {
           await napcat.get_group_msg_history({
             group_id: context.group_id,
             message_seq: 0,
-            count: 200,
+            count,
           })
         ).messages,
       );
