@@ -1,4 +1,3 @@
-import { Structs } from "node-napcat-ts";
 import { Agent } from "../agent";
 
 export default async (agent: Agent) => {
@@ -28,8 +27,8 @@ export default async (agent: Agent) => {
         return;
       }
 
-      const contentType = response.headers.get("content-type") || "";
-      if (contentType.includes("application/json")) {
+      const content_type = response.headers.get("content-type") || "";
+      if (content_type.includes("application/json")) {
         try {
           const data = await response.json();
           await quick.reply(context, JSON.stringify(data, null, 2));
@@ -39,17 +38,7 @@ export default async (agent: Agent) => {
             `JSON解析失败: ${error instanceof Error ? error.message : String(error)}`,
           );
         }
-      } else if (contentType.includes("image")) {
-        try {
-          const buffer = Buffer.from(await response.arrayBuffer());
-          await quick.reply(context, [Structs.image(buffer)]);
-        } catch (error) {
-          await quick.reply(
-            context,
-            `图片解析失败: ${error instanceof Error ? error.message : String(error)}`,
-          );
-        }
-      } else {
+      } else if (content_type.includes("text")) {
         try {
           const text = await response.text();
           await quick.reply(context, text);
@@ -59,6 +48,8 @@ export default async (agent: Agent) => {
             `文本解析失败: ${error instanceof Error ? error.message : String(error)}`,
           );
         }
+      } else {
+        await quick.reply(context, `不支持的类型: ${content_type}`);
       }
     } catch (error) {
       await quick.reply(
