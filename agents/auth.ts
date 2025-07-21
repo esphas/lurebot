@@ -1,4 +1,5 @@
 import { Agent } from "../agent";
+import { Command } from "../agent/command";
 import { User } from "../auth/user";
 
 export default async (agent: Agent) => {
@@ -168,3 +169,18 @@ export default async (agent: Agent) => {
     await quick.reply(context, `错误通知已${assign ? "开启" : "关闭"}`);
   });
 };
+
+export const commands = [
+  {
+    name: "admin",
+    event: "message.private",
+    symbol: "!",
+    handler: async (context) => {
+      const admin = context.auth.admin();
+      if (admin != null) {
+        return;
+      }
+      context.auth.user.register(context.user.id);
+    },
+  } as Command<"message.private">,
+] as Command[];

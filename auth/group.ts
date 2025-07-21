@@ -40,6 +40,18 @@ export class GroupRepository extends Repository<Group, GroupDB> {
     };
   }
 
+  get safe_calls() {
+    return {
+      ban: this.ban.bind(this) as this["ban"],
+      unban: this.unban.bind(this) as this["unban"],
+      is_banned: this.is_banned.bind(this) as this["is_banned"],
+      register: this.register.bind(this) as this["register"],
+      unregister: this.unregister.bind(this) as this["unregister"],
+      is_registered: this.is_registered.bind(this) as this["is_registered"],
+      is_valid: this.is_valid.bind(this) as this["is_valid"],
+    };
+  }
+
   from_napcat(context: Omit<GeneralNapcatMessage, "user_id">) {
     const qq = context.group_id;
     if (qq == null) {

@@ -1,20 +1,15 @@
-import { Agent } from "../agent";
+import { Command } from "../agent/command";
 
-export default async (agent: Agent) => {
-  const { auth, napcat } = agent.app;
-
-  agent.on("notice.notify.poke", async (context) => {
-    if (context.target_id !== context.self_id) {
-      return;
-    }
-    const { user, group, scope } = auth.from_napcat(context);
-    if (!auth.can(user.id, scope.id, "chat")) {
-      return;
-    }
-
-    await napcat.send_poke({
-      user_id: user.qq!,
-      group_id: group?.qq ?? undefined,
-    });
-  });
-};
+export const commands = [
+  {
+    name: "heartbeat",
+    event: "notice.notify.poke",
+    permission: "chat",
+    handler: async (context) => {
+      if (context.raw.target_id !== context.raw.self_id) {
+        return;
+      }
+      await context.reply_poke();
+    },
+  } as Command<"notice.notify.poke">,
+] as Command[];

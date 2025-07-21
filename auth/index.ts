@@ -70,12 +70,28 @@ export class Auth {
     }
   }
 
+  get safe_calls() {
+    return {
+      admin: this.admin.bind(this) as this["admin"],
+      can: this.can.bind(this) as this["can"],
+    };
+  }
+
   from_napcat(context: GeneralNapcatMessage) {
     return {
       user: this.user.from_napcat(context),
       group: this.group.from_napcat(context),
       scope: this.scope.from_napcat(context),
     };
+  }
+
+  admin() {
+    const scope = this.scope.global();
+    const users = this.user_scope_role.find_users_with_role(scope.id, "admin");
+    if (users.length === 0) {
+      return null;
+    }
+    return users[0];
   }
 
   assign(user_id: number, scope_id: number, role_id: string) {
