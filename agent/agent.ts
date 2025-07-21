@@ -69,39 +69,50 @@ export class Agent<T extends EventKey = EventKey> {
         match = null;
       }
       // permission
-      const operator =
-        typeof command.permission === "string" ? "and" : command.permission[0];
-      const permissions =
+      const { operator, permissions } =
         typeof command.permission === "string"
-          ? [command.permission]
-          : command.permission.slice(1);
+          ? { operator: "and", permissions: [command.permission] }
+          : {
+              operator: command.permission[0],
+              permissions: command.permission.slice(1),
+            };
       if (permissions.length === 0) {
         permissions.push("chat");
       }
-      if (operator === "and") {
-        if (
-          permissions.some(
-            (permission) =>
-              !context.auth.can(context.user.id, context.scope.id, permission),
-          )
-        ) {
+      if (command.name !== "admin") {
+        if (operator === "and") {
+          if (
+            permissions.some(
+              (permission) =>
+                !this.app.auth.can(
+                  context.user.id,
+                  context.scope.id,
+                  permission,
+                ),
+            )
+          ) {
+            return;
+          }
+        } else if (operator === "or") {
+          if (
+            permissions.every(
+              (permission) =>
+                !this.app.auth.can(
+                  context.user.id,
+                  context.scope.id,
+                  permission,
+                ),
+            )
+          ) {
+            return;
+          }
+        } else {
+          this.logger.log(
+            "warn",
+            `[Agent: ${this.file}][Command: ${command.name}] Invalid permission operator: ${operator}`,
+          );
           return;
         }
-      } else if (operator === "or") {
-        if (
-          permissions.every(
-            (permission) =>
-              !context.auth.can(context.user.id, context.scope.id, permission),
-          )
-        ) {
-          return;
-        }
-      } else {
-        this.logger.log(
-          "warn",
-          `[Agent: ${this.file}][Command: ${command.name}] Invalid permission operator: ${operator}`,
-        );
-        return;
       }
       // handler
       try {
@@ -162,9 +173,8 @@ export class Agent<T extends EventKey = EventKey> {
   }
 
   /** @deprecated */
-  on(_event: T, _fn: (ctx: any) => void) {
-    // eslint-disable-line @typescript-eslint/no-explicit-any
-  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  on(_event: T, _fn: (ctx: any) => void) {}
 
   async reload() {
     await this.unload();

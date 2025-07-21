@@ -1,106 +1,8 @@
 import { Agent } from "../agent";
 import { Command } from "../agent/command";
-import { User } from "../auth/user";
 
 export default async (agent: Agent) => {
-  const { auth, napcat, quick } = agent.app;
-
-  // claim admin
-  if (auth.user.count({ registered: true }) === 0) {
-    agent.on("message.private", async (context) => {
-      if (context.raw_message === "!admin") {
-        if (auth.user.count({ registered: true }) === 0) {
-          const { user } = auth.from_napcat(context);
-          auth.user.register(user.id);
-          auth.assign(user.id, auth.scope.global().id, "admin");
-          await quick.reply(context, "你已获得管理员权限");
-        }
-      }
-    });
-  }
-
-  agent.on("message", async (context) => {
-    const match = context.raw_message.match(
-      /^!(add|allow|remove|deny)\s*(group|user|all)(\s.+)$/,
-    );
-    if (!match) {
-      return;
-    }
-    const { user, group, scope } = auth.from_napcat(context);
-    if (!auth.can(user.id, scope.id, "root")) {
-      return;
-    }
-
-    const command =
-      match[1] === "add" || match[1] === "allow" ? "add" : "remove";
-    const type = match[2] as "group" | "user" | "all";
-    const arg = match[3].trim();
-
-    if (type === "group") {
-      let group_qq = group?.qq ?? 0;
-      if (arg.length > 0) {
-        group_qq = Number(arg.match(/^\d+$/)?.[0]);
-      }
-      if (group_qq === 0 || isNaN(group_qq)) {
-        await quick.reply(context, "无效的群号");
-        return;
-      }
-      const new_group = auth.group.from_napcat({ group_id: group_qq })!;
-      if (command === "add") {
-        auth.group.register(new_group.id);
-      } else {
-        auth.group.unregister(new_group.id);
-      }
-      await quick.reply(context, `ok, ${command} ${new_group.qq}`);
-    } else if (type === "user") {
-      let user_qq = user?.qq ?? 0;
-      if (arg.length > 0) {
-        user_qq = Number(arg.match(/^\d+$/)?.[0]);
-      }
-      if (user_qq === 0 || isNaN(user_qq)) {
-        await quick.reply(context, "无效的 QQ 号");
-        return;
-      }
-      const new_user = auth.user.from_napcat({ user_id: user_qq });
-      if (command === "add") {
-        auth.user.register(new_user.id);
-      } else {
-        auth.user.unregister(new_user.id);
-      }
-      await quick.reply(context, `ok, ${command} ${new_user.qq}`);
-    } else {
-      let group_qq = group?.qq ?? 0;
-      if (arg.length > 0) {
-        group_qq = Number(arg.match(/^\d+$/)?.[0]);
-      }
-      if (group_qq === 0 || isNaN(group_qq)) {
-        await quick.reply(context, "无效的群号");
-        return;
-      }
-      const members = (
-        await napcat.get_group_member_list({
-          group_id: group_qq,
-        })
-      ).map((member) => auth.user.from_napcat({ user_id: member.user_id }));
-      const users: User[] = [];
-      let success = 0;
-      if (command === "add") {
-        for (const member of members) {
-          users.push(...auth.user.register(member.id));
-        }
-        success = users.filter((user) => user.registered).length;
-      } else {
-        for (const member of members) {
-          users.push(...auth.user.unregister(member.id));
-        }
-        success = users.filter((user) => !user.registered).length;
-      }
-      await quick.reply(
-        context,
-        `ok, ${command} ${group_qq} ${success}/${members.length}`,
-      );
-    }
-  });
+  const { auth, quick } = agent.app;
 
   agent.on("message", async (context) => {
     const match = context.raw_message.match(/^!(trust|untrust)\s*(\d+)\s*$/);
@@ -172,15 +74,101 @@ export default async (agent: Agent) => {
 
 export const commands = [
   {
-    name: "admin",
     event: "message.private",
     symbol: "!",
+    name: "admin",
     handler: async (context) => {
-      const admin = context.auth.admin();
-      if (admin != null) {
-        return;
+      const result = context.auth<"always">().auth.claim_admin(context.user.id);
+      if (result) {
+        await context.reply("你已获得管理员权限");
+      } else {
+        await context.reply("管理员已存在");
       }
-      context.auth.user.register(context.user.id);
     },
   } as Command<"message.private">,
+  {
+    event: "message",
+    permission: "root",
+    name: "group",
+    pattern: "(add|allow|+|remove|deny|-)\\s*(\\d+)?",
+    handler: async (context, match) => {
+      const is_add = ["add", "allow", "+"].includes(match![1]);
+      const group_qq = Number(match![2]);
+      if (group_qq === 0 || isNaN(group_qq)) {
+        await context.reply("无效的群号");
+        return;
+      }
+      const group = context
+        .auth<"always">()
+        .group.from_napcat({ group_id: group_qq })!;
+      if (is_add) {
+        context.auth<"root">().group.register(group.id);
+      } else {
+        context.auth<"root">().group.unregister(group.id);
+      }
+      await context.reply(`ok, 已${is_add ? "添加" : "移除"}群 ${group.qq}`);
+    },
+  } as Command<"message">,
+  {
+    event: "message",
+    permission: "root",
+    name: "user",
+    pattern: "(add|allow|+|remove|deny|-)\\s*(\\d+)?",
+    handler: async (context, match) => {
+      const is_add = ["add", "allow", "+"].includes(match![1]);
+      const user_qq = Number(match![2]);
+      if (user_qq === 0 || isNaN(user_qq)) {
+        await context.reply("无效的 QQ 号");
+        return;
+      }
+      const user = context
+        .auth<"always">()
+        .user.from_napcat({ user_id: user_qq })!;
+      if (is_add) {
+        context.auth<"root">().user.register(user.id);
+      } else {
+        context.auth<"root">().user.unregister(user.id);
+      }
+      await context.reply(`ok, 已${is_add ? "添加" : "移除"}用户 ${user.qq}`);
+    },
+  } as Command<"message">,
+  // {
+  //   event: "message",
+  //   permission: "root",
+  //   name: "group-all",
+  //   pattern: "(add|allow|+|remove|deny|-)\\s*(\\d+)?",
+  //   handler: async (context, match) => {
+  //     const is_add = ["add", "allow", "+"].includes(match![1]);
+  //     let group_qq = Number(match![2]);
+  //     if (group_qq === 0 || isNaN(group_qq)) {
+  //       await context.reply("无效的群号");
+  //       return;
+  //     }
+  //     // TODO: 暴露 napcat.get_group_member_list
+
+  // const members = (
+  //   await napcat.get_group_member_list({
+  //     group_id: group_qq,
+  //   })
+  // ).map((member) => auth.user.from_napcat({ user_id: member.user_id }));
+  // const users: User[] = [];
+  // let success = 0;
+  // if (command === "add") {
+  //   for (const member of members) {
+  //     users.push(...auth.user.register(member.id));
+  //   }
+  //   success = users.filter((user) => user.registered).length;
+  // } else {
+  //   for (const member of members) {
+  //     users.push(...auth.user.unregister(member.id));
+  //   }
+  //   success = users.filter((user) => !user.registered).length;
+  // }
+  // await quick.reply(
+  //   context,
+  //   `ok, ${command} ${group_qq} ${success}/${members.length}`,
+  // );
+
+  //   },
+  // } as Command<"message">,
 ] as Command[];

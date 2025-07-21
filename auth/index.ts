@@ -23,6 +23,114 @@ export type GeneralNapcatMessage = {
   };
 };
 
+type RepoMap = {
+  auth: Auth;
+  user: UserRepository;
+  group: GroupRepository;
+  scope: ScopeRepository;
+  user_scope_role: UserScopeRoleRepository;
+};
+type SafeCallDesc = {
+  [K in keyof RepoMap]: (keyof RepoMap[K])[];
+};
+const SAFE_CALL_PERMISSIONS = [
+  "always",
+  "chat",
+  "trusted",
+  "moderate",
+  "root",
+] as const;
+type SafeCallPermission = (typeof SAFE_CALL_PERMISSIONS)[number];
+const SAFE_CALL_DESC_MAP = {
+  always: {
+    auth: ["admin", "claim_admin", "can"],
+    user: ["from_napcat", "is_banned", "is_registered", "is_valid"],
+    group: ["from_napcat", "is_banned", "is_registered", "is_valid"],
+    scope: ["from_napcat", "global", "private", "group"],
+    user_scope_role: ["find_users_with_role", "get_role", "get_permissions"],
+  },
+  chat: {
+    auth: [],
+    user: [],
+    group: [],
+    scope: [],
+    user_scope_role: [],
+  },
+  trusted: {
+    auth: [],
+    user: [],
+    group: [],
+    scope: [],
+    user_scope_role: [],
+  },
+  moderate: {
+    auth: [],
+    user: ["ban", "unban"],
+    group: [],
+    scope: [],
+    user_scope_role: [],
+  },
+  root: {
+    auth: ["assign", "revoke"],
+    user: ["register", "unregister"],
+    group: ["register", "unregister", "ban", "unban"],
+    scope: [],
+    user_scope_role: [],
+  },
+} as const satisfies {
+  [K in SafeCallPermission]: SafeCallDesc;
+};
+type SafeCallDescMap = typeof SAFE_CALL_DESC_MAP;
+const pick = <
+  T extends SafeCallPermission,
+  R extends keyof RepoMap,
+  A extends RepoMap[R] = RepoMap[R],
+  K extends keyof A & SafeCallDescMap[T][R][number] = keyof A &
+    SafeCallDescMap[T][R][number],
+>(
+  t: A,
+  keys: K[],
+): Pick<A, K> => {
+  return Object.fromEntries(
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
+    keys.map((k) => [k, (t[k] as unknown as Function).bind(t)]),
+  ) as Pick<A, K>;
+};
+export type SafeCalls = Auth["safe_calls"];
+
+export type Merge2<A, B> = {
+  [K in keyof A | keyof B]: K extends keyof A
+    ? K extends keyof B
+      ? A[K] extends object
+        ? B[K] extends object
+          ? Merge2<A[K], B[K]>
+          : B[K]
+        : B[K]
+      : A[K]
+    : K extends keyof B
+      ? B[K]
+      : never;
+};
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type Merge<T extends any[]> = T extends [infer A, infer B, ...infer Rest]
+  ? Merge<[Merge2<A, B>, ...Rest]>
+  : T extends [infer Only]
+    ? Only
+    : unknown;
+export type AllCalls = Merge<
+  [
+    SafeCalls["always"],
+    SafeCalls["chat"],
+    SafeCalls["trusted"],
+    SafeCalls["moderate"],
+    SafeCalls["root"],
+  ]
+>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const auth_t = <T extends keyof SafeCalls>(t: any) => {
+  return t as unknown as SafeCalls[T];
+};
+
 export class Auth {
   public user: UserRepository;
   public group: GroupRepository;
@@ -70,11 +178,54 @@ export class Auth {
     }
   }
 
-  get safe_calls() {
-    return {
-      admin: this.admin.bind(this) as this["admin"],
-      can: this.can.bind(this) as this["can"],
+  _calc_safe_calls() {
+    const pick_fn = <T extends SafeCallPermission>(d: SafeCallDescMap[T]) => {
+      return {
+        auth: pick<T, "auth">(this, d["auth"]),
+        user: pick<T, "user">(this.user, d["user"]),
+        group: pick<T, "group">(this.group, d["group"]),
+        scope: pick<T, "scope">(this.scope, d["scope"]),
+        user_scope_role: pick<T, "user_scope_role">(
+          this.user_scope_role,
+          d["user_scope_role"],
+        ),
+      };
     };
+    return Object.fromEntries(
+      SAFE_CALL_PERMISSIONS.map((k) => [k, pick_fn(SAFE_CALL_DESC_MAP[k])]),
+    ) as unknown as {
+      [K in SafeCallPermission]: ReturnType<typeof pick_fn<K>>;
+    };
+  }
+  private _safe_calls?: ReturnType<typeof this._calc_safe_calls>;
+  get safe_calls() {
+    if (this._safe_calls == null) {
+      this._safe_calls = this._calc_safe_calls();
+    }
+    return this._safe_calls;
+  }
+
+  get_safe_calls(user_id: number, scope_id: number) {
+    const calls = this.safe_calls;
+
+    const permissions = this.user_scope_role
+      .get_permissions(user_id, scope_id)
+      .filter((p) => ["chat", "trusted", "moderate", "root"].includes(p)) as (
+      | "always"
+      | "chat"
+      | "trusted"
+      | "moderate"
+      | "root"
+    )[];
+    permissions.unshift("always" as const);
+
+    const all_calls = permissions.reduce((acc, perm) => {
+      return {
+        ...acc,
+        ...(calls[perm] as AllCalls),
+      };
+    }, {} as AllCalls);
+    return all_calls;
   }
 
   from_napcat(context: GeneralNapcatMessage) {
@@ -92,6 +243,15 @@ export class Auth {
       return null;
     }
     return users[0];
+  }
+
+  claim_admin(user_id: number) {
+    const current_admin = this.admin();
+    if (current_admin != null) {
+      return false;
+    }
+    this.assign(user_id, this.scope.global().id, "admin");
+    return true;
   }
 
   assign(user_id: number, scope_id: number, role_id: string) {

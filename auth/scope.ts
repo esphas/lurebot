@@ -36,14 +36,6 @@ export class ScopeRepository extends Repository<Scope, ScopeDB> {
     };
   }
 
-  get safe_calls() {
-    return {
-      global: this.global.bind(this) as this["global"],
-      private: this.private.bind(this) as this["private"],
-      group: this.group.bind(this) as this["group"],
-    };
-  }
-
   global() {
     this.insert({ type: "global" }, "ignore");
     return this.get({ type: "global" })!;

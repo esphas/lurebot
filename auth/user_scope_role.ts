@@ -27,18 +27,6 @@ export class UserScopeRoleRepository extends Repository<UserScopeRole> {
     };
   }
 
-  get safe_calls() {
-    return {
-      find_users_with_role: this.find_users_with_role.bind(
-        this,
-      ) as this["find_users_with_role"],
-      get_role: this.get_role.bind(this) as this["get_role"],
-      get_permissions: this.get_permissions.bind(
-        this,
-      ) as this["get_permissions"],
-    };
-  }
-
   change(user_id: number, scope_id: number, role_id: string) {
     return this.upsert({ user_id, scope_id, role_id }, { user_id, scope_id });
   }
