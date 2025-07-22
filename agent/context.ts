@@ -31,7 +31,7 @@ export interface CommonContext<T extends EventKey> {
     llm: LLM
     notify(error: Error | string): Promise<void>
     reply: (
-        message: string | SendMessageSegment | SendMessageSegment[],
+        message: string | Buffer | SendMessageSegment | SendMessageSegment[],
     ) => Promise<{ message_id: number }>
     reply_poke: () => Promise<null>
 }
@@ -133,10 +133,12 @@ export function create_context_napcat<T extends keyof AllHandlers>(
             }
             if (typeof msg === 'string') {
                 message.push(Structs.text(msg))
+            } else if (msg instanceof Buffer) {
+                message.push(Structs.image(msg))
             } else if (Array.isArray(msg)) {
                 message.push(...msg)
             } else {
-                message.push(msg)
+                message.push(msg as SendMessageSegment)
             }
             return await app.napcat.send_msg({
                 ...merged_target,

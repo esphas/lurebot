@@ -1,5 +1,5 @@
 import { Logger } from 'winston'
-import { AllHandlers, EventKey } from 'node-napcat-ts'
+import { AllHandlers, EventKey, Structs } from 'node-napcat-ts'
 
 import { App } from '../app'
 import { Command, CommandControl } from './command'
@@ -230,11 +230,18 @@ export class Agent<T extends EventKey = EventKey> {
                     pattern: `\\s*${uc.pattern}`,
                     handler: async (context, __m__) => {
                         const match = __m__!.slice(1)
-                        const content = uc.content
+                        const q = {
+                            s: Structs,
+                        }
                         let result: string = ''
                         try {
-                            const fn = new Function('context', 'match', content)
-                            const fn_ret = fn(context, match)
+                            const fn = new Function(
+                                'context',
+                                'match',
+                                'q',
+                                uc.content,
+                            )
+                            const fn_ret = fn(context, match, q)
                             if (typeof fn_ret === 'string') {
                                 result = fn_ret
                             } else {
