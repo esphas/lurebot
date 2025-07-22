@@ -122,4 +122,19 @@ export default [
             `alter table auth_user_scope_role drop column qq_name`,
         ],
     },
+    {
+        version: 3,
+        up: [
+            `create table if not exists user_command (
+                id integer primary key,
+                name text not null,
+                pattern text not null,
+                content text not null,
+                created_by integer not null,
+                created_at text not null default (datetime('now', 'localtime')),
+                foreign key (created_by) references auth_user(id) on delete cascade
+            )`,
+        ],
+        down: [`drop table if exists user_command`],
+    },
 ] as Migration[]

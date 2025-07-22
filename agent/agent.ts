@@ -12,8 +12,16 @@ export class Agent<T extends EventKey = EventKey> {
 
     constructor(
         public app: App,
-        public dir: string,
-        public file: string,
+        public source:
+            | {
+                  type: 'file'
+                  dir: string
+                  file: string
+              }
+            | {
+                  type: 'user_command'
+                  id: number
+              },
         public logger: Logger,
     ) {}
 
@@ -36,7 +44,7 @@ export class Agent<T extends EventKey = EventKey> {
 
         this.logger.log(
             'info',
-            `[Agent: ${this.file}][Command: ${cmd.name}] Loading... Regex: ${regex}`,
+            `[Command: ${cmd.name}] Loading... Regex: ${regex}`,
         )
         const fn = async (ctx: AllHandlers[keyof AllHandlers]) => {
             if (!('self_id' in ctx) || !('user_id' in ctx)) {
@@ -69,10 +77,10 @@ export class Agent<T extends EventKey = EventKey> {
             }
             // context
             this.logger.log('debug', `Creating context...`)
-            const context = create_context_napcat<T>(
-                this.app,
-                ctx as AllHandlers[T],
-            )
+            const context = create_context_napcat<T>(ctx as AllHandlers[T], {
+                app: this.app,
+                logger: this.logger,
+            })
             if (context == null) {
                 return
             }
@@ -129,7 +137,7 @@ export class Agent<T extends EventKey = EventKey> {
                 } else {
                     this.logger.log(
                         'warn',
-                        `[Agent: ${this.file}][Command: ${command.name}] Invalid permission operator: ${operator}`,
+                        `[Command: ${command.name}] Invalid permission operator: ${operator}`,
                     )
                     return
                 }
@@ -145,13 +153,16 @@ export class Agent<T extends EventKey = EventKey> {
                 let message = ''
                 if (error instanceof Error) {
                     message = `${error.name}: ${error.message}\n${error.stack}`
+                } else if (typeof error === 'string') {
+                    message = error
                 } else {
-                    message = String(error)
+                    try {
+                        message = JSON.stringify(error)
+                    } catch {
+                        message = error
+                    }
                 }
-                this.logger.log(
-                    'warn',
-                    `[Agent: ${this.file}][Command: ${command.name}] ${message}`,
-                )
+                this.logger.log('warn', `[Command: ${command.name}] ${message}`)
                 context.notify(
                     error instanceof Error ? error : new Error(String(error)),
                 )
@@ -161,24 +172,15 @@ export class Agent<T extends EventKey = EventKey> {
 
         const control: CommandControl = {
             enable: () => {
-                this.logger.log(
-                    'info',
-                    `[Agent: ${this.file}][Command: ${command.name}] Enabling`,
-                )
+                this.logger.log('info', `[Command: ${command.name}] Enabling`)
                 command.disabled = false
             },
             disable: () => {
-                this.logger.log(
-                    'info',
-                    `[Agent: ${this.file}][Command: ${command.name}] Disabling`,
-                )
+                this.logger.log('info', `[Command: ${command.name}] Disabling`)
                 command.disabled = true
             },
             unload: () => {
-                this.logger.log(
-                    'info',
-                    `[Agent: ${this.file}][Command: ${command.name}] Unloading`,
-                )
+                this.logger.log('info', `[Command: ${command.name}] Unloading`)
                 control.disable()
                 this.app.napcat.off(cmd.event, fn)
                 this.commands.delete(command.name)
@@ -196,31 +198,52 @@ export class Agent<T extends EventKey = EventKey> {
         }
     }
 
-    /** @deprecated */
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    on(_event: T, _fn: (ctx: any) => void) {}
-
     async reload() {
         await this.unload()
-        this.logger.log('info', `Loading agent: ${this.file}`)
+        this.logger.log('info', `Agent loading...`)
         try {
             this.loaded = true
-            const { commands } = await import(
-                `../${this.dir}/${this.file}?t=${Date.now()}`
-            )
-            if (commands == null) {
-                this.logger.log('warn', `Agent: ${this.file} has no commands`)
-                return
-            }
-            for (const command of commands) {
-                this.load_command(command)
+            if (this.source.type === 'file') {
+                const { commands } = await import(
+                    `../${this.source.dir}/${this.source.file}?t=${Date.now()}`
+                )
+                if (commands == null) {
+                    this.logger.log('warn', `No commands found`)
+                    return
+                }
+                for (const command of commands) {
+                    this.load_command(command)
+                }
+            } else if (this.source.type === 'user_command') {
+                const uc = this.app.agents.user_command_repository.get({
+                    id: this.source.id,
+                })
+                if (uc == null) {
+                    this.logger.log('warn', `User command not found`)
+                    return
+                }
+                this.load_command({
+                    event: 'message' as unknown as T,
+                    permission: 'chat',
+                    symbol: '.',
+                    name: uc.name,
+                    pattern: uc.pattern,
+                    handler: async (context, __m__) => {
+                        const match = __m__!.slice(1)
+                        const content = uc.content
+                        let result: string = ''
+                        try {
+                            const fn = new Function('context', 'match', content)
+                            result = JSON.stringify(fn(context, match))
+                        } catch (error) {
+                            result = `执行失败: ${error.inspect ? error.inspect() : error}`
+                        }
+                        await context.reply(result || `成功响应 ${uc.name}`)
+                    },
+                })
             }
         } catch (error) {
-            this.logger.log(
-                'error',
-                `Failed to load agent: ${this.file}`,
-                error,
-            )
+            this.logger.log('error', `Failed to load agent`, error)
             this.unload()
         }
     }
@@ -229,7 +252,7 @@ export class Agent<T extends EventKey = EventKey> {
         if (!this.loaded) {
             return
         }
-        this.logger.log('info', `Unloading agent: ${this.file}`)
+        this.logger.log('info', `Agent unloading...`)
         this.commands.forEach(([_, control]) => {
             control.unload()
         })

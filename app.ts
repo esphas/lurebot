@@ -35,9 +35,9 @@ export class App {
     public auth: Auth
     public sessions: Sessions
     public llm: LLM
+    public agents: Agents
 
     private logger: Logger
-    private agents: Agents
 
     private config: Required<AppConfig>
 
@@ -117,7 +117,7 @@ export class App {
             this.config.agent_dir,
             logger.child({ name: 'Agents' }),
         )
-        this.agents.watch()
+        this.agents.init()
     }
 
     async start() {

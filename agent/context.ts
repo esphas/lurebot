@@ -1,3 +1,4 @@
+import { Logger } from 'winston'
 import {
     AllHandlers,
     EventKey,
@@ -24,6 +25,7 @@ export interface CommonContext<T extends EventKey> {
     group: Group | null
     scope: Scope
     time: Date
+    logger: Logger
     auth: <T extends keyof SafeCalls>(t: T) => SafeCalls[T]
     sessions: Sessions
     llm: LLM
@@ -42,25 +44,31 @@ export type NoticeContext<T extends EventKey> = CommonContext<T>
 
 export type Context<T extends EventKey> = MessageContext<T> | NoticeContext<T>
 
+export interface CreateContextExtra {
+    app: App
+    logger: Logger
+}
 export function create_context_napcat<T extends keyof MessageHandler>(
-    app: App,
     napcat_ctx: MessageHandler[T],
+    extra: CreateContextExtra,
 ): MessageContext<T>
 export function create_context_napcat<T extends keyof NoticeHandler>(
-    app: App,
     napcat_ctx: NoticeHandler[T],
+    extra: CreateContextExtra,
 ): NoticeContext<T> | null
 export function create_context_napcat<T extends keyof AllHandlers>(
-    app: App,
     napcat_ctx: AllHandlers[T],
+    extra: CreateContextExtra,
 ): Context<T> | null
 export function create_context_napcat<T extends keyof AllHandlers>(
-    app: App,
     napcat_ctx: AllHandlers[T],
+    extra: CreateContextExtra,
 ): Context<T> | null {
     if (!('self_id' in napcat_ctx) || !('user_id' in napcat_ctx)) {
         return null
     }
+    const app = extra.app
+    const logger = extra.logger
     const self = app.auth.user.from_napcat({ user_id: napcat_ctx.self_id })
     const { user, group, scope } = app.auth.from_napcat(napcat_ctx)
     // for convenience
@@ -92,6 +100,7 @@ export function create_context_napcat<T extends keyof AllHandlers>(
         auth,
         sessions: app.sessions,
         llm: app.llm,
+        logger,
         notify: async (error) => {
             const listeners = app.auth.get_error_notify_users(scope.id)
             if (listeners.length === 0) {
