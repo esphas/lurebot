@@ -237,7 +237,7 @@ export class Agent<T extends EventKey = EventKey> {
                                 'q',
                                 uc.content,
                             )
-                            const fn_ret = fn(context, match, q)
+                            const fn_ret = await fn(context, match, q)
                             if (typeof fn_ret === 'string') {
                                 result = fn_ret
                             } else {
