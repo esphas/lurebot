@@ -76,8 +76,14 @@ export const commands = [
         name: 'uclist',
         pattern: '(\\s+\\d+)?',
         handler: async (context, match, app) => {
-            const user_id = match![2] ? Number(match![2]) : context.user.id
-            const reply = app!.agents.user_command_list(user_id)
+            const matched_qq = Number(match![2])
+            let id = context.user.id
+            if (matched_qq === 0) {
+                id = context
+                    .auth('always')
+                    .user.from_napcat({ user_id: matched_qq })!.id
+            }
+            const reply = app!.agents.user_command_list(id)
             await context.reply(reply)
         },
     } as Command<'message'>,
