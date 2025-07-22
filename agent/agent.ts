@@ -241,6 +241,7 @@ export class Agent<T extends EventKey = EventKey> {
                                 'q',
                                 uc.content,
                             )
+                            this.logger.log('warn', `executing ${uc.content}`)
                             const fn_ret = fn(context, match, q)
                             if (typeof fn_ret === 'string') {
                                 result = fn_ret
