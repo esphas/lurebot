@@ -59,11 +59,7 @@ export class Agent<T extends EventKey = EventKey> {
             let match: RegExpMatchArray | null = null
             // match
             if (ctx.post_type === 'message') {
-                const first_message = ctx.message[0]
-                if (first_message == null || first_message.type !== 'text') {
-                    return
-                }
-                const text = first_message.data.text
+                const text = ctx.raw_message
                 match = text.match(regex)
                 this.logger.log(
                     'debug',
@@ -235,12 +231,11 @@ export class Agent<T extends EventKey = EventKey> {
                         }
                         let result: string = ''
                         try {
-                            const content = uc.content.replace(/[\\"]/g, '\\$1')
                             const fn = new Function(
                                 'context',
                                 'match',
                                 'q',
-                                content,
+                                uc.content,
                             )
                             const fn_ret = fn(context, match, q)
                             if (typeof fn_ret === 'string') {
