@@ -67,16 +67,19 @@ export class UserScopeRoleRepository extends Repository<UserScopeRole> {
         include_global: boolean = true,
     ) {
         if (!this.auth.user.is_valid(user_id)) {
+            this.logger.log('debug', `User ${user_id} is not valid`)
             return false
         }
         const scope = this.auth.scope.get({ id: scope_id })
         if (scope == null) {
+            this.logger.log('debug', `Scope ${scope_id} is not valid`)
             return false
         }
         if (
             scope.type == 'group' &&
             !this.auth.group.is_valid(Number(scope.extra))
         ) {
+            this.logger.log('debug', `Group ${scope.extra} is not valid`)
             return false
         }
         const permissions = this.get_permissions(user_id, scope_id)
@@ -85,6 +88,10 @@ export class UserScopeRoleRepository extends Repository<UserScopeRole> {
                 ...this.get_permissions(user_id, this.auth.scope.global().id),
             )
         }
+        this.logger.log(
+            'debug',
+            `Permissions: ${permissions} -- Permission: ${permission}`,
+        )
         return permissions.includes(permission)
     }
 }

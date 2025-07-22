@@ -216,7 +216,6 @@ export class Auth {
 
     get_safe_calls(user_id: number, scope_id: number) {
         const calls = this.safe_calls
-
         const permissions = this.user_scope_role
             .get_permissions(user_id, scope_id)
             .filter((p) =>
@@ -225,10 +224,14 @@ export class Auth {
         permissions.unshift('always' as const)
 
         const all_calls = permissions.reduce((acc, perm) => {
-            return {
-                ...acc,
-                ...(calls[perm] as AllCalls),
-            }
+            const current = calls[perm] as AllCalls
+            Object.keys(current).forEach((p) => {
+                acc[p] = {
+                    ...(acc[p] || {}),
+                    ...current[p],
+                }
+            })
+            return acc
         }, {} as AllCalls)
         return [permissions, all_calls] as const
     }

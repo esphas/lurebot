@@ -20,11 +20,6 @@ export class Agent<T extends EventKey = EventKey> {
     load_command(cmd: Command<T>) {
         this.unload_command(cmd.name)
 
-        this.logger.log(
-            'info',
-            `[Agent: ${this.file}][Command: ${cmd.name}] Loading`,
-        )
-
         const command: Required<Command<T>> = {
             managed: true,
             disabled: false,
@@ -34,12 +29,15 @@ export class Agent<T extends EventKey = EventKey> {
             ...cmd,
         }
 
-        const regex = command.pattern
-            ? new RegExp(
-                  `^${command.symbol}(${command.name})\\s+${command.pattern}`,
-                  'i',
-              )
-            : new RegExp(`^${command.symbol}(${command.name})`, 'i')
+        const regex = new RegExp(
+            `^${command.symbol}(${command.name})${command.pattern}`,
+            'i',
+        )
+
+        this.logger.log(
+            'info',
+            `[Agent: ${this.file}][Command: ${cmd.name}] Loading... Regex: ${regex}`,
+        )
         const fn = async (ctx: AllHandlers[keyof AllHandlers]) => {
             if (!('self_id' in ctx) || !('user_id' in ctx)) {
                 return
@@ -48,13 +46,6 @@ export class Agent<T extends EventKey = EventKey> {
                 return
             }
             if (ctx.post_type !== 'message' && ctx.post_type !== 'notice') {
-                return
-            }
-            const context = create_context_napcat<T>(
-                this.app,
-                ctx as AllHandlers[T],
-            )
-            if (context == null) {
                 return
             }
             let match: RegExpMatchArray | null = null
@@ -66,11 +57,24 @@ export class Agent<T extends EventKey = EventKey> {
                 }
                 const text = first_message.data.text
                 match = text.match(regex)
+                this.logger.log(
+                    'debug',
+                    `Text: ${text} -- Regex: ${regex} -- Match: ${match}`,
+                )
                 if (match == null) {
                     return
                 }
             } else if (ctx.post_type === 'notice') {
                 match = null
+            }
+            // context
+            this.logger.log('debug', `Creating context...`)
+            const context = create_context_napcat<T>(
+                this.app,
+                ctx as AllHandlers[T],
+            )
+            if (context == null) {
+                return
             }
             // permission
             if (command.permission !== 'any') {
@@ -84,6 +88,10 @@ export class Agent<T extends EventKey = EventKey> {
                 if (permissions.length === 0) {
                     permissions.push('chat')
                 }
+                this.logger.log(
+                    'debug',
+                    `Permissions: ${permissions} -- Operator: ${operator}`,
+                )
                 if (operator === 'and') {
                     if (
                         permissions.some(
@@ -95,6 +103,10 @@ export class Agent<T extends EventKey = EventKey> {
                                 ),
                         )
                     ) {
+                        this.logger.log(
+                            'debug',
+                            `Permissions denied: ${permissions}`,
+                        )
                         return
                     }
                 } else if (operator === 'or') {
@@ -108,6 +120,10 @@ export class Agent<T extends EventKey = EventKey> {
                                 ),
                         )
                     ) {
+                        this.logger.log(
+                            'debug',
+                            `Permissions denied: ${permissions}`,
+                        )
                         return
                     }
                 } else {
@@ -125,10 +141,10 @@ export class Agent<T extends EventKey = EventKey> {
                     match,
                     command.managed ? null : this.app,
                 )
-            } catch (error: unknown) {
+            } catch (error) {
                 let message = ''
                 if (error instanceof Error) {
-                    message = JSON.stringify(error)
+                    message = `${error.name}: ${error.message}\n${error.stack}`
                 } else {
                     message = String(error)
                 }

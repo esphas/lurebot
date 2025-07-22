@@ -22,7 +22,7 @@ export const commands = [
         event: 'message',
         permission: 'root',
         name: 'group',
-        pattern: '(add|allow|+|remove|deny|-)\\s*(\\d+)?',
+        pattern: '(add|allow|\\+|remove|deny|-)\\s*(\\d+)?',
         handler: async (context, match) => {
             const is_add = ['add', 'allow', '+'].includes(match![1])
             const group_qq = Number(match![2])
@@ -47,7 +47,7 @@ export const commands = [
         event: 'message',
         permission: 'root',
         name: 'user',
-        pattern: '(add|allow|+|remove|deny|-)\\s*(\\d+)?',
+        pattern: '(add|allow|\\+|remove|deny|-)\\s*(\\d+)?',
         handler: async (context, match) => {
             const is_add = ['add', 'allow', '+'].includes(match![1])
             const user_qq = Number(match![2])
@@ -73,7 +73,7 @@ export const commands = [
         event: 'message',
         permission: 'root',
         name: 'group-all',
-        pattern: '(add|allow|+|remove|deny|-)\\s*(\\d+)?',
+        pattern: '(add|allow|\\+|remove|deny|-)\\s*(\\d+)?',
         handler: async (context, match, app) => {
             const is_add = ['add', 'allow', '+'].includes(match![1])
             const group_qq = Number(match![2])
