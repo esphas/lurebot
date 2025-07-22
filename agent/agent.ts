@@ -235,13 +235,13 @@ export class Agent<T extends EventKey = EventKey> {
                         }
                         let result: string = ''
                         try {
+                            this.logger.log('warn', `executing ${uc.content}`)
                             const fn = new Function(
                                 'context',
                                 'match',
                                 'q',
                                 uc.content,
                             )
-                            this.logger.log('warn', `executing ${uc.content}`)
                             const fn_ret = fn(context, match, q)
                             if (typeof fn_ret === 'string') {
                                 result = fn_ret

@@ -37,7 +37,7 @@ export class App {
     public llm: LLM
     public agents: Agents
 
-    private logger: Logger
+    public logger: Logger
 
     private config: Required<AppConfig>
 
