@@ -38,7 +38,7 @@ export class Agent<T extends EventKey = EventKey> {
         }
 
         const regex = new RegExp(
-            `^${command.symbol}(${command.name})${command.pattern}`,
+            `^${command.symbol}(${command.name})\\s*${command.pattern}`,
             'i',
         )
 
