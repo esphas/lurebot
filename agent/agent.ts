@@ -227,14 +227,19 @@ export class Agent<T extends EventKey = EventKey> {
                     permission: 'chat',
                     symbol: '.',
                     name: uc.name,
-                    pattern: uc.pattern,
+                    pattern: `\\s*${uc.pattern}`,
                     handler: async (context, __m__) => {
                         const match = __m__!.slice(1)
                         const content = uc.content
                         let result: string = ''
                         try {
                             const fn = new Function('context', 'match', content)
-                            result = JSON.stringify(fn(context, match))
+                            const fn_ret = fn(context, match)
+                            if (typeof fn_ret === 'string') {
+                                result = fn_ret
+                            } else {
+                                result = JSON.stringify(fn_ret)
+                            }
                         } catch (error) {
                             result = `执行失败: ${error.inspect ? error.inspect() : error}`
                         }
