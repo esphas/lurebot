@@ -225,7 +225,7 @@ export class Auth {
         ...(calls[perm] as AllCalls),
       };
     }, {} as AllCalls);
-    return all_calls;
+    return [permissions, all_calls] as const;
   }
 
   from_napcat(context: GeneralNapcatMessage) {

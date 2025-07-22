@@ -26,10 +26,11 @@ export class Agent<T extends EventKey = EventKey> {
     );
 
     const command: Required<Command<T>> = {
+      managed: true,
       disabled: false,
+      permission: "chat",
       symbol: "." as const,
       pattern: "",
-      permission: "chat",
       ...cmd,
     };
 
@@ -69,17 +70,17 @@ export class Agent<T extends EventKey = EventKey> {
         match = null;
       }
       // permission
-      const { operator, permissions } =
-        typeof command.permission === "string"
-          ? { operator: "and", permissions: [command.permission] }
-          : {
-              operator: command.permission[0],
-              permissions: command.permission.slice(1),
-            };
-      if (permissions.length === 0) {
-        permissions.push("chat");
-      }
-      if (command.name !== "admin") {
+      if (command.permission !== "any") {
+        const { operator, permissions } =
+          typeof command.permission === "string"
+            ? { operator: "and", permissions: [command.permission] }
+            : {
+                operator: command.permission[0],
+                permissions: command.permission.slice(1),
+              };
+        if (permissions.length === 0) {
+          permissions.push("chat");
+        }
         if (operator === "and") {
           if (
             permissions.some(
@@ -116,7 +117,7 @@ export class Agent<T extends EventKey = EventKey> {
       }
       // handler
       try {
-        await cmd.handler(context, match);
+        await cmd.handler(context, match, command.managed ? null : this.app);
       } catch (error: unknown) {
         let message = "";
         if (error instanceof Error) {

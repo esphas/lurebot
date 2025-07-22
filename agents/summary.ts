@@ -1,83 +1,74 @@
 import { WSSendReturn } from "node-napcat-ts";
 import ms from "ms";
 
-import { Agent } from "../agent";
 import { LLMMessage } from "../llm";
+import { Command } from "../agent/command";
 
-export default async (agent: Agent) => {
-  const { auth, quick, llm, napcat } = agent.app;
+export const commands = [
+  {
+    managed: false,
+    event: "message.group",
+    permission: "chat",
+    name: "summary(?:-(\\d+))?(?:\\[(.+)\\])?",
+    pattern: "((?:.|\n)+)?",
+    handler: async (context, match, app) => {
+      const llm = context.llm;
+      const count = Math.min(match![2] ? parseInt(match![2]) : 300, 500);
+      const model = match![3] || context.llm.default_model;
+      const question = match![4];
 
-  agent.on("message.group", async (context) => {
-    const match = context.raw_message.match(
-      /^.(?:summary)(?:-(\d+))?(?:\[(.+)\])?(\s(?:.|\n)+)?$/,
-    );
-    if (!match) {
-      return;
-    }
-    const { user, scope } = auth.from_napcat(context);
-    if (!auth.can(user.id, scope.id, "chat")) {
-      return;
-    }
+      try {
+        const start_time = Date.now();
+        await context.reply(`好的，让我查看一下最近的聊天记录... (${model})`);
 
-    const count = Math.min(match[1] ? parseInt(match[1]) : 300, 500);
-    const model = match[2] || llm.default_model;
-    const question = match[3];
+        const history = format_history(
+          (
+            await app!.napcat.get_group_msg_history({
+              group_id: context.group!.id,
+              message_seq: 0,
+              count,
+            })
+          ).messages,
+        );
 
-    try {
-      const start_time = Date.now();
-      await quick.reply(
-        context,
-        `好的，让我查看一下最近的聊天记录... (${model})`,
-      );
+        const messages = [
+          {
+            role: "system",
+            content: [
+              `你是一个专业的聊天助手，正处在一个群聊中。`,
+              `你的 QQ 号为 ${context.self.qq}。`,
+              `你需要根据聊天记录，提炼主要话题和关键信息，以便回答用户的问题。`,
+              `格式上，你需要按照内容前后的顺序，按话题划分小标题。`,
+              `内容上，你需要注意区分历史发言事实和你产生的主观评论。如果需要用到链接，必须原样保留。`,
+              `以下是聊天记录：`,
+            ].join(""),
+          },
+          {
+            role: "system",
+            content: history,
+          },
+          {
+            role: "user",
+            content: question || "最近在聊些什么？",
+          },
+        ] as LLMMessage[];
 
-      const history = format_history(
-        (
-          await napcat.get_group_msg_history({
-            group_id: context.group_id,
-            message_seq: 0,
-            count,
-          })
-        ).messages,
-      );
+        const response = await llm.chat_completions(messages, model);
 
-      const messages = [
-        {
-          role: "system",
-          content: [
-            `你是一个专业的聊天助手，正处在一个群聊中。`,
-            `你的 QQ 号为 ${context.self_id}。`,
-            `你需要根据聊天记录，提炼主要话题和关键信息，以便回答用户的问题。`,
-            `格式上，你需要按照内容前后的顺序，按话题划分小标题。`,
-            `内容上，你需要注意区分历史发言事实和你产生的主观评论。如果需要用到链接，必须原样保留。`,
-            `以下是聊天记录：`,
-          ].join(""),
-        },
-        {
-          role: "system",
-          content: history,
-        },
-        {
-          role: "user",
-          content: question || "最近在聊些什么？",
-        },
-      ] as LLMMessage[];
+        const end_time = Date.now();
+        const duration = ms(end_time - start_time);
 
-      const response = await llm.chat_completions(messages, model);
-
-      const end_time = Date.now();
-      const duration = ms(end_time - start_time);
-
-      const content = response.content;
-      await quick.reply(context, `[${duration}] ${content}`);
-    } catch (error) {
-      await quick.reply(context, "LLM 请求失败");
-      await quick.log_error(
-        context,
-        `LLM 请求失败: ${error instanceof Error ? error.message : String(error)}`,
-      );
-    }
-  });
-};
+        const content = response.content;
+        await context.reply(`[${duration}] ${content}`);
+      } catch (error) {
+        await context.reply("LLM 请求失败");
+        await context.notify(
+          `LLM 请求失败: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    },
+  } as Command<"message.group">,
+] as Command[];
 
 function format_history(messages: WSSendReturn["get_msg"][]) {
   return messages

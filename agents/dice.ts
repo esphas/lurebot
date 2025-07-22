@@ -1,51 +1,15 @@
-import { Agent } from "../agent";
+import { Command } from "../agent/command";
 
-export default async (agent: Agent) => {
-  const { auth, quick } = agent.app;
-
-  const rollDice = (count: number, face: number) => {
-    const results: number[] = [];
-    for (let i = 0; i < count; i++) {
-      results.push(Math.floor(Math.random() * face) + 1);
-    }
-    return results.reduce((a, b) => a + b, 0);
-  };
-
-  agent.on(
-    "message",
-    async (context) => {
-      const match = context.raw_message.match(/^\.r(?:oll)?\s*(\d+)\s*$/);
-      if (!match) {
-        return;
-      }
-      const { user, scope } = auth.from_napcat(context);
-      if (!auth.can(user.id, scope.id, "chat")) {
-        return;
-      }
-
-      const face = Number(match[1]);
-      const result = rollDice(1, face);
-      await quick.reply(context, String(result));
-    },
-    "simple dice",
-  );
-
-  agent.on(
-    "message",
-    async (context) => {
-      const match = context.raw_message.match(
-        /^\.r(?:oll)?\s*((?:(?:\d+\s*)?d\s*)?\d+)((?:\s*[+-]\s*(?:(?:\d+\s*)?d\s*)?\d+)*)\s*$/,
-      );
-      if (!match) {
-        return;
-      }
-      const { user, scope } = auth.from_napcat(context);
-      if (!auth.can(user.id, scope.id, "chat")) {
-        return;
-      }
-
-      const first = match[1];
-      const rest = match[2].trim();
+export const commands = [
+  {
+    event: "message",
+    permission: "chat",
+    name: "r",
+    pattern:
+      "((?:(?:\\d+\\s*)?d\\s*)?\\d+)((?:\\s*[+-]\\s*(?:(?:\\d+\\s*)?d\\s*)?\\d+)*)",
+    handler: async (context, match) => {
+      const first = match![1];
+      const rest = match![2].trim();
       let sum = 0;
       let result = "";
       if (first.includes("d")) {
@@ -74,8 +38,15 @@ export default async (agent: Agent) => {
         }
       }
       result += ` = ${sum}`;
-      await quick.reply(context, result);
+      await context.reply(result);
     },
-    "dice",
-  );
+  } as Command<"message">,
+] as Command[];
+
+const rollDice = (count: number, face: number) => {
+  const results: number[] = [];
+  for (let i = 0; i < count; i++) {
+    results.push(Math.floor(Math.random() * face) + 1);
+  }
+  return results.reduce((a, b) => a + b, 0);
 };

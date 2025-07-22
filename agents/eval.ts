@@ -1,30 +1,27 @@
-import { Agent } from "../agent";
+import { Command } from "../agent/command";
 
-export default async (agent: Agent) => {
-  const { auth, quick } = agent.app;
+export const commands = [
+  {
+    managed: false,
+    event: "message",
+    permission: "root",
+    symbol: "!",
+    name: "eval",
+    pattern: "((?:.|\n)+)",
+    handler: async (context, match, app) => {
+      const script = match![2].trim();
 
-  agent.on("message", async (context) => {
-    const match = context.raw_message.match(/^!(eval)\s((?:.|\n)+)$/);
-    if (!match) {
-      return;
-    }
-    const { user } = auth.from_napcat(context);
-    if (!auth.can(user.id, auth.scope.global().id, "root")) {
-      return;
-    }
-
-    const script = match[2].trim();
-
-    try {
-      const func = new Function(script).bind(agent.app);
-      const result = func();
-      await quick.reply(context, JSON.stringify(result, null, 2));
-    } catch (error) {
-      if (error instanceof Error) {
-        await quick.reply(context, `Error: ${error.message} ${error.stack}`);
-      } else {
-        await quick.reply(context, `Error: ${error}`);
+      try {
+        const func = new Function(script).bind(app);
+        const result = func();
+        await context.reply(JSON.stringify(result, null, 2));
+      } catch (error) {
+        if (error instanceof Error) {
+          await context.reply(`Error: ${error.message} ${error.stack}`);
+        } else {
+          await context.reply(`Error: ${error}`);
+        }
       }
-    }
-  });
-};
+    },
+  } as Command<"message">,
+] as Command[];

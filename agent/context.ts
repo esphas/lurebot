@@ -14,6 +14,8 @@ import { auth_t, SafeCalls } from "../auth";
 import { User } from "../auth/user";
 import { Group } from "../auth/group";
 import { Scope } from "../auth/scope";
+import { Sessions } from "../session";
+import { LLM } from "../llm";
 
 export interface CommonContext<T extends EventKey> {
   raw: AllHandlers[T];
@@ -22,7 +24,9 @@ export interface CommonContext<T extends EventKey> {
   group: Group | null;
   scope: Scope;
   time: Date;
-  auth: <T extends keyof SafeCalls>() => SafeCalls[T];
+  auth: <T extends keyof SafeCalls>(t: T) => SafeCalls[T];
+  sessions: Sessions;
+  llm: LLM;
   notify(error: Error | string): Promise<void>;
   reply: (
     message: string | SendMessageSegment | SendMessageSegment[],
@@ -69,7 +73,15 @@ export function create_context_napcat<T extends keyof AllHandlers>(
       : {
           user_id: napcat_ctx.user_id,
         };
-  const safe_calls = app.auth.get_safe_calls(user.id, scope.id);
+  const [permissions, safe_calls] = app.auth.get_safe_calls(user.id, scope.id);
+  const auth = <T extends keyof SafeCalls>(t: T) => {
+    if (!permissions.includes(t)) {
+      throw new Error(
+        `User ${user.id} is not allowed to use auth(${t}) in scope ${scope.id}`,
+      );
+    }
+    return auth_t<T>(safe_calls);
+  };
   const common: CommonContext<T> = {
     raw: napcat_ctx,
     self,
@@ -77,7 +89,9 @@ export function create_context_napcat<T extends keyof AllHandlers>(
     group,
     scope,
     time: new Date(napcat_ctx.time),
-    auth: <T extends keyof SafeCalls>() => auth_t<T>(safe_calls),
+    auth,
+    sessions: app.sessions,
+    llm: app.llm,
     notify: async (error) => {
       const listeners = app.auth.get_error_notify_users(scope.id);
       if (listeners.length === 0) {

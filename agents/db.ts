@@ -1,40 +1,35 @@
 import { SqliteError } from "better-sqlite3";
 
-import { Agent } from "../agent";
+import { Command } from "../agent/command";
 
-export default async (agent: Agent) => {
-  const { auth, db, quick } = agent.app;
+export const commands = [
+  {
+    managed: false,
+    event: "message",
+    permission: "root",
+    symbol: "!",
+    name: "db|sql",
+    pattern: "((?:.|\n)+)",
+    handler: async (context, match, app) => {
+      const sql = match![2].trim();
 
-  agent.on("message", async (context) => {
-    const match = context.raw_message.match(/^!(db|sql)\s((?:.|\n)+)$/);
-    if (!match) {
-      return;
-    }
-    const { user } = auth.from_napcat(context);
-    if (!auth.can(user.id, auth.scope.global().id, "root")) {
-      return;
-    }
-
-    const cmd = match[1];
-    const sql = match[2].trim();
-
-    try {
-      if (cmd === "db") {
-        const result = db.prepare(sql).run();
-        await quick.reply(context, `Result: ${result.changes} rows affected`);
-      } else {
-        const result = db.prepare(sql).all();
-        await quick.reply(context, `Result: ${JSON.stringify(result)}`);
+      try {
+        if (sql.startsWith("select")) {
+          const result = app!.db.prepare(sql).all();
+          await context.reply(`Result: ${JSON.stringify(result)}`);
+        } else {
+          const result = app!.db.prepare(sql).run();
+          await context.reply(`Result: ${result.changes} rows affected`);
+        }
+      } catch (error) {
+        if (error instanceof SqliteError) {
+          await context.reply(
+            `SqliteError: code[${error.code}] message[${error.message}]`,
+          );
+        } else {
+          await context.reply(`Error: ${error}`);
+        }
       }
-    } catch (error) {
-      if (error instanceof SqliteError) {
-        await quick.reply(
-          context,
-          `SqliteError: code[${error.code}] message[${error.message}]`,
-        );
-      } else {
-        await quick.reply(context, `Error: ${error}`);
-      }
-    }
-  });
-};
+    },
+  } as Command<"message">,
+] as Command[];
