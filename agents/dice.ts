@@ -8,8 +8,8 @@ export const commands = [
         pattern:
             '((?:(?:\\d+\\s*)?d\\s*)?\\d+)((?:\\s*[+-]\\s*(?:(?:\\d+\\s*)?d\\s*)?\\d+)*)',
         handler: async (context, match) => {
-            const first = match![1]
-            const rest = match![2].trim()
+            const first = match![2]
+            const rest = match![3].trim()
             let sum = 0
             let result = ''
             if (first.includes('d')) {

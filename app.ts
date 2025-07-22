@@ -8,7 +8,6 @@ import { Database } from './db'
 import { Auth } from './auth'
 import { Sessions } from './session'
 import { Agents } from './agent'
-import { Quick } from './quick'
 import { LLM } from './llm'
 
 export type RequiredAppConfig = {
@@ -35,7 +34,6 @@ export class App {
     public db: Database
     public auth: Auth
     public sessions: Sessions
-    public quick: Quick
     public llm: LLM
 
     private logger: Logger
@@ -113,8 +111,6 @@ export class App {
             this.config.llm_endpoint,
             this.config.llm_api_key,
         )
-
-        this.quick = new Quick(this)
 
         this.agents = new Agents(
             this,

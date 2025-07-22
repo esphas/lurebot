@@ -261,6 +261,7 @@ export class Auth {
         if (current_admin != null) {
             return false
         }
+        this.user.register(user_id)
         this.assign(user_id, this.scope.global().id, 'admin')
         return true
     }

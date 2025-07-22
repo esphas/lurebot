@@ -11,7 +11,7 @@ export const commands = [
         handler: async (context, match) => {
             const llm = context.llm
             const sessions = context.sessions
-            const model = match![1] || llm.default_model
+            const model = match![2] || llm.default_model
             const user_message = match![2]
 
             const llm_session = sessions.get_or_create_session({
