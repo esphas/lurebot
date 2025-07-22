@@ -65,7 +65,7 @@ export const commands = [
             } catch (error) {
                 await context.reply('LLM 请求失败')
                 await context.notify(
-                    `LLM 请求失败: ${error instanceof Error ? error.message : String(error)}`,
+                    `LLM 请求失败: ${error instanceof Error ? error.message : JSON.stringify(error, null, 2)}`,
                 )
             }
         },
