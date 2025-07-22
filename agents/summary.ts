@@ -26,12 +26,12 @@ export const commands = [
                 const history = format_history(
                     (
                         await app!.napcat.get_group_msg_history({
-                            group_id: context.group!.id,
+                            group_id: context.group!.qq!,
                             count,
                         })
                     ).messages,
                 )
-                await context.notify(history)
+
                 const messages = [
                     {
                         role: 'system',
@@ -55,7 +55,7 @@ export const commands = [
                 ] as LLMMessage[]
 
                 const response = await llm.chat_completions(messages, model)
-                await context.notify(response.content)
+
                 const end_time = Date.now()
                 const duration = ms(end_time - start_time)
 
