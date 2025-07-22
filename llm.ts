@@ -53,6 +53,7 @@ export class LLM {
         model: string = this.default_model,
     ) {
         const endpoint = this.endpoint + '/chat/completions'
+        console.log('breakpoint2-1')
         const response = await fetch(endpoint, {
             method: 'POST',
             headers: {

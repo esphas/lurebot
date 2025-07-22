@@ -27,12 +27,11 @@ export const commands = [
                     (
                         await app!.napcat.get_group_msg_history({
                             group_id: context.group!.id,
-                            message_seq: 0,
                             count,
                         })
                     ).messages,
                 )
-
+                console.log('breakpoint1')
                 const messages = [
                     {
                         role: 'system',
@@ -56,6 +55,7 @@ export const commands = [
                 ] as LLMMessage[]
 
                 const response = await llm.chat_completions(messages, model)
+                console.log('breakpoint2')
 
                 const end_time = Date.now()
                 const duration = ms(end_time - start_time)
@@ -73,6 +73,8 @@ export const commands = [
 ] as Command[]
 
 function format_history(messages: WSSendReturn['get_msg'][]) {
+    console.log('breakpoint1-2')
+
     return messages
         .map((message, index) => {
             const meta = `#${index + 1} 消息${message.message_id}：${message.sender.nickname}(${message.sender.user_id}) ${new Date(message.time.toLocaleString())}`
