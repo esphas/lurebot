@@ -27,6 +27,7 @@ export const commands = [
                     (
                         await app!.napcat.get_group_msg_history({
                             group_id: context.group!.qq!,
+                            message_seq: 0,
                             count,
                         })
                     ).messages,
