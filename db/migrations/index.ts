@@ -1,12 +1,12 @@
-import { Migration } from "../migration";
+import { Migration } from '../migration'
 
 export default [
-  {
-    version: 1,
-    up: [
-      // auth
+    {
+        version: 1,
+        up: [
+            // auth
 
-      `create table if not exists auth_user (
+            `create table if not exists auth_user (
                 id integer primary key,
                 qq integer not null,
                 registered integer not null default 0,
@@ -15,9 +15,9 @@ export default [
                 created_at text not null default (datetime('now', 'localtime'))
             )`,
 
-      `create unique index if not exists idx_auth_user_qq_unique on auth_user(qq) where qq is not null`,
+            `create unique index if not exists idx_auth_user_qq_unique on auth_user(qq) where qq is not null`,
 
-      `create table if not exists auth_group (
+            `create table if not exists auth_group (
                 id integer primary key,
                 qq integer,
                 registered integer not null default 0,
@@ -25,9 +25,9 @@ export default [
                 created_at text not null default (datetime('now', 'localtime'))
             )`,
 
-      `create unique index if not exists idx_auth_group_qq_unique on auth_group(qq) where qq is not null`,
+            `create unique index if not exists idx_auth_group_qq_unique on auth_group(qq) where qq is not null`,
 
-      `create table if not exists auth_scope (
+            `create table if not exists auth_scope (
                 id integer primary key,
                 type text not null constraint ck_auth_scope_type check (type in ('global', 'private', 'group')),
                 extra text not null default '',
@@ -35,15 +35,15 @@ export default [
                 unique (type, extra)
             )`,
 
-      `create table if not exists auth_role (
+            `create table if not exists auth_role (
                 id text primary key
             )`,
 
-      `create table if not exists auth_permission (
+            `create table if not exists auth_permission (
                 id text primary key
             )`,
 
-      `create table if not exists auth_role_permission (
+            `create table if not exists auth_role_permission (
                 role_id text not null,
                 permission_id text not null,
                 primary key (role_id, permission_id),
@@ -51,7 +51,7 @@ export default [
                 foreign key (permission_id) references auth_permission(id) on delete cascade
             )`,
 
-      `create table if not exists auth_user_scope_role (
+            `create table if not exists auth_user_scope_role (
                 user_id integer not null,
                 scope_id integer not null,
                 role_id text not null,
@@ -61,9 +61,9 @@ export default [
                 foreign key (role_id) references auth_role(id) on delete cascade
             )`,
 
-      // session
+            // session
 
-      `create table if not exists sessions (
+            `create table if not exists sessions (
                 id text primary key,
                 created_at text not null default (datetime('now', 'localtime')),
                 last_active text not null default (datetime('now', 'localtime')),
@@ -76,7 +76,7 @@ export default [
                 unique (created_by, topic, scope_id)
             )`,
 
-      `create table if not exists session_participants (
+            `create table if not exists session_participants (
                 session_id text not null,
                 user_id integer not null,
                 role text not null,
@@ -87,7 +87,7 @@ export default [
                 foreign key (user_id) references auth_user(id) on delete cascade
             )`,
 
-      `create table if not exists session_variables (
+            `create table if not exists session_variables (
                 session_id text not null,
                 key text not null,
                 value text not null,
@@ -97,7 +97,7 @@ export default [
                 foreign key (session_id) references sessions(id) on delete cascade
             )`,
 
-      `create table if not exists session_messages (
+            `create table if not exists session_messages (
                 id integer primary key,
                 session_id text not null,
                 role text not null,
@@ -107,19 +107,19 @@ export default [
                 created_at text not null default (datetime('now', 'localtime')),
                 foreign key (session_id) references sessions(id) on delete cascade
             )`,
-    ],
-  },
-  {
-    version: 2,
-    up: [
-      `alter table auth_user add column qq_name text not null default ''`,
-      `alter table auth_group add column qq_name text not null default ''`,
-      `alter table auth_user_scope_role add column qq_name text not null default ''`,
-    ],
-    down: [
-      `alter table auth_user drop column qq_name`,
-      `alter table auth_group drop column qq_name`,
-      `alter table auth_user_scope_role drop column qq_name`,
-    ],
-  },
-] as Migration[];
+        ],
+    },
+    {
+        version: 2,
+        up: [
+            `alter table auth_user add column qq_name text not null default ''`,
+            `alter table auth_group add column qq_name text not null default ''`,
+            `alter table auth_user_scope_role add column qq_name text not null default ''`,
+        ],
+        down: [
+            `alter table auth_user drop column qq_name`,
+            `alter table auth_group drop column qq_name`,
+            `alter table auth_user_scope_role drop column qq_name`,
+        ],
+    },
+] as Migration[]

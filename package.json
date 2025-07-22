@@ -1,47 +1,47 @@
 {
-  "name": "lurebot",
-  "version": "1.0.0",
-  "description": "",
-  "license": "ISC",
-  "author": "esphas",
-  "type": "module",
-  "main": "index.ts",
-  "scripts": {
-    "start": "tsx index.ts",
-    "deploy": "tsx deploy-webhook.ts",
-    "prepare": "husky",
-    "lint": "eslint --fix",
-    "format": "prettier . --write"
-  },
-  "dependencies": {
-    "better-sqlite3": "^12.2.0",
-    "chokidar": "^4.0.3",
-    "clean-stack": "^5.2.0",
-    "dotenv": "^17.2.0",
-    "express": "^5.1.0",
-    "ms": "^2.1.3",
-    "node-napcat-ts": "^0.4.13",
-    "tsx": "^4.20.3",
-    "winston": "^3.17.0"
-  },
-  "devDependencies": {
-    "@eslint/js": "^9.31.0",
-    "@types/better-sqlite3": "^7.6.13",
-    "@types/express": "5.0.3",
-    "@types/ms": "^2.1.0",
-    "@types/node": "^24.0.14",
-    "eslint": "^9.31.0",
-    "eslint-config-prettier": "^10.1.8",
-    "globals": "^16.3.0",
-    "husky": "^9.1.7",
-    "lint-staged": "^16.1.2",
-    "prettier": "3.6.2",
-    "typescript-eslint": "^8.37.0"
-  },
-  "lint-staged": {
-    "*.{js,mjs,cjs,ts,mts,cts}": [
-      "eslint --fix",
-      "prettier . --write"
-    ]
-  }
+    "name": "lurebot",
+    "version": "1.0.0",
+    "description": "",
+    "license": "ISC",
+    "author": "esphas",
+    "type": "module",
+    "main": "index.ts",
+    "scripts": {
+        "start": "tsx index.ts",
+        "deploy": "tsx deploy-webhook.ts",
+        "prepare": "husky",
+        "lint": "eslint --fix",
+        "format": "prettier . --write"
+    },
+    "dependencies": {
+        "better-sqlite3": "^12.2.0",
+        "chokidar": "^4.0.3",
+        "clean-stack": "^5.2.0",
+        "dotenv": "^17.2.0",
+        "express": "^5.1.0",
+        "ms": "^2.1.3",
+        "node-napcat-ts": "^0.4.13",
+        "tsx": "^4.20.3",
+        "winston": "^3.17.0"
+    },
+    "devDependencies": {
+        "@eslint/js": "^9.31.0",
+        "@types/better-sqlite3": "^7.6.13",
+        "@types/express": "5.0.3",
+        "@types/ms": "^2.1.0",
+        "@types/node": "^24.0.14",
+        "eslint": "^9.31.0",
+        "eslint-config-prettier": "^10.1.8",
+        "globals": "^16.3.0",
+        "husky": "^9.1.7",
+        "lint-staged": "^16.1.2",
+        "prettier": "3.6.2",
+        "typescript-eslint": "^8.37.0"
+    },
+    "lint-staged": {
+        "*.{js,mjs,cjs,ts,mts,cts}": [
+            "eslint --fix",
+            "prettier . --write"
+        ]
+    }
 }
