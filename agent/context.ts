@@ -106,7 +106,13 @@ export function create_context_napcat<T extends keyof AllHandlers>(
                     ),
                 )
             } else {
-                message.push(Structs.text(String(error)))
+                let json_error: string
+                try {
+                    json_error = JSON.stringify(error, null, 2)
+                } catch (_e) {
+                    json_error = `${error}`
+                }
+                message.push(Structs.text(`${json_error}`))
             }
             for (const listener of listeners) {
                 if (listener.qq != null) {
